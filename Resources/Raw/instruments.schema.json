@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stringtuner.local/schemas/instruments.schema.json",
+  "title": "StringTuner Instrument Catalog",
+  "description": "Strict JSON catalog for instrument tunings and open-string pitches.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "instruments"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "instruments": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/instrumentTuning" }
+    }
+  },
+  "$defs": {
+    "instrumentTuning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instrumentName", "tuningName", "strings"],
+      "properties": {
+        "instrumentName": { "type": "string", "minLength": 1 },
+        "tuningName": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "strings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": { "$ref": "#/$defs/instrumentString" }
+        }
+      }
+    },
+    "instrumentString": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "order"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 0 },
+        "midiNote": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "frequency": {
+          "oneOf": [
+            { "type": "number", "exclusiveMinimum": 0 },
+            {
+              "type": "string",
+              "pattern": "^[+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"
+            }
+          ]
+        },
+        "note": {
+          "type": "string",
+          "description": "A-G note letter, optional Unicode accidental, then octave. Accidentals: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50), U+1D133 quarter-tone flat (-50), U+1D134 three-quarter-tone sharp (+150), U+1D135 three-quarter-tone flat (-150). ASCII # and b are not supported.",
+          "pattern": "^[A-Ga-g](?:\\u266F|\\u266D|\\uD834\\uDD32|\\uD834\\uDD33|\\uD834\\uDD34|\\uD834\\uDD35)?-?[0-9]{1,2}$"
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["midiNote"],
+          "not": { "anyOf": [{ "required": ["frequency"] }, { "required": ["note"] }] }
+        },
+        {
+          "required": ["frequency"],
+          "not": { "anyOf": [{ "required": ["midiNote"] }, { "required": ["note"] }] }
+        },
+        {
+          "required": ["note"],
+          "not": { "anyOf": [{ "required": ["midiNote"] }, { "required": ["frequency"] }] }
+        }
+      ]
+    }
+  }
+}

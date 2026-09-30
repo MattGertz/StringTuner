@@ -206,7 +206,7 @@ public sealed class TunerViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     public string TuningName => _selectedInstrument?.TuningName ?? string.Empty;
 
-    public string TargetNote => _selectedString is null ? "—" : $"{_selectedString.NoteName}{_selectedString.Octave}";
+    public string TargetNote => _selectedString?.DisplayNote ?? "—";
 
     public string TargetOctave => _selectedString is null ? string.Empty : $"STRING {_selectedString.Label.ToUpperInvariant()}";
 
@@ -214,7 +214,7 @@ public sealed class TunerViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     public string TargetFrequencyText => _selectedString is null
         ? "—"
-        : $"{PitchMath.MidiToFrequency(_selectedString.MidiNote, ReferencePitch):0.000} Hz target";
+        : $"{_selectedString.GetTargetFrequency(ReferencePitch):0.000} Hz target";
 
     public string MeasuredFrequencyText => MeasuredFrequency is double frequency ? $"{frequency:0.00}" : "—";
 
@@ -457,7 +457,7 @@ public sealed class TunerViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     private double TargetFrequency => _selectedString is null
         ? 440
-        : PitchMath.MidiToFrequency(_selectedString.MidiNote, ReferencePitch);
+        : _selectedString.GetTargetFrequency(ReferencePitch);
 
     private void OnAudioSamples(ReadOnlyMemory<float> samples)
     {

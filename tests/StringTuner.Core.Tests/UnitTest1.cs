@@ -37,27 +37,121 @@ public sealed class PitchAndTuningTests
     }
 
     [Fact]
-    public void CatalogParserAllowsCommentsAndTrailingCommas()
+    public void CatalogSchemaIsValidStrictJsonAndListsUnicodeAccidentals()
     {
-        const string json = """
-            {
-              // A hand-editable catalog can use comments and a trailing comma.
-              "schemaVersion": 1,
-              "instruments": [{
-                "instrumentName": "Test instrument",
-                "tuningName": "Test tuning",
-                "strings": [{ "label": "1", "midiNote": 69, "order": 0, }],
-              }],
-            }
-            """;
+        using var schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "instruments.schema.json")));
+        var schemaText = schema.RootElement.GetProperty("$defs")
+            .GetProperty("instrumentString")
+            .GetProperty("properties")
+            .GetProperty("note")
+            .GetProperty("description")
+            .GetString();
 
-        Assert.Single(InstrumentCatalogJson.Deserialize(json));
+        Assert.Contains("U+1D132", schemaText);
+        Assert.Contains("U+1D135", schemaText);
+        Assert.Contains("ASCII # and b are not supported", schemaText);
     }
+
+    [Fact]
+        public void CatalogParserRejectsCommentsAndTrailingCommas()
+    {
+                const string commentedJson = """
+                        { // comments are not valid JSON
+                            "schemaVersion": 1,
+                            "instruments": [{"instrumentName":"Test","tuningName":"Test","strings":[{"label":"1","midiNote":69,"order":0}]}]
+                        }
+                        """;
+                const string trailingCommaJson = """
+                        {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Test","strings":[{"label":"1","midiNote":69,"order":0,}]}]}
+                        """;
+
+                Assert.Throws<JsonException>(() => InstrumentCatalogJson.Deserialize(commentedJson));
+                Assert.Throws<JsonException>(() => InstrumentCatalogJson.Deserialize(trailingCommaJson));
+    }
+
+        [Fact]
+        public void CatalogAcceptsMidiFrequencyAndOctaveNotePitchForms()
+        {
+                const string json = """
+                        {
+                            "schemaVersion": 1,
+                            "instruments": [{
+                                "instrumentName": "Test",
+                                "tuningName": "Pitch forms",
+                                "strings": [
+                                    { "label": "MIDI", "midiNote": 57, "order": 0 },
+                                    { "label": "Numeric Hz", "frequency": 220, "order": 1 },
+                                    { "label": "String Hz", "frequency": "220.5", "order": 2 },
+                                    { "label": "Flat Unicode", "note": "A♭3", "order": 3 },
+                                    { "label": "Sharp Unicode", "note": "C♯4", "order": 4 },
+                                    { "label": "Flat Unicode", "note": "A♭3", "order": 5 },
+                                    { "label": "Sharp Unicode", "note": "G♯4", "order": 6 }
+                                ]
+                            }]
+                        }
+                        """;
+
+                var strings = Assert.Single(InstrumentCatalogJson.Deserialize(json)).Strings;
+
+                Assert.Equal(7, strings.Count);
+                Assert.Equal(221, strings[0].GetTargetFrequency(442), precision: 8);
+                Assert.Equal(220, strings[1].GetTargetFrequency(442), precision: 8);
+                Assert.Equal(220.5, strings[2].GetTargetFrequency(442), precision: 8);
+                Assert.Equal("A♭3", strings[3].DisplayNote);
+                Assert.Equal("C♯4", strings[4].DisplayNote);
+                Assert.Equal("A♭3", strings[5].DisplayNote);
+                Assert.Equal("G♯4", strings[6].DisplayNote);
+                Assert.Equal(57, strings[3].MidiNote);
+                Assert.Equal(57, strings[5].MidiNote);
+                Assert.Equal(60, strings[4].MidiNote);
+                Assert.Equal(67, strings[6].MidiNote);
+        }
+
+        [Theory]
+        [InlineData("{\"midiNote\":69,\"note\":\"A4\"}")]
+        [InlineData("{\"label\":\"No pitch\"}")]
+        [InlineData("{\"frequency\":0}")]
+        [InlineData("{\"frequency\":\"not Hz\"}")]
+        [InlineData("{\"note\":\"H2\"}")]
+        [InlineData("{\"note\":\"A♮4\"}")]
+        [InlineData("{\"note\":\"C#4\"}")]
+        [InlineData("{\"note\":\"Bb3\"}")]
+        public void CatalogRejectsMissingAmbiguousOrInvalidPitchForms(string pitchProperties)
+        {
+                var json = $$"""
+                        {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Bad pitch","strings":[{"label":"X","order":0,{{pitchProperties.TrimStart('{')}}]}]}
+                        """;
+
+                Assert.Throws<InvalidDataException>(() => InstrumentCatalogJson.Deserialize(json));
+        }
 
     [Fact]
     public void CatalogParserReportsMalformedJson()
     {
         Assert.Throws<JsonException>(() => InstrumentCatalogJson.Deserialize("{ invalid"));
+    }
+
+    [Theory]
+    [InlineData("♯", 100)]
+    [InlineData("♭", -100)]
+    [InlineData("\U0001D132", 50)]
+    [InlineData("\U0001D133", -50)]
+    [InlineData("\U0001D134", 150)]
+    [InlineData("\U0001D135", -150)]
+    public void UnicodeAccidentalsProduceExactCentOffsets(string accidental, int expectedCents)
+    {
+        var note = $"A{accidental}4";
+        var json = $$"""
+            {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Microtonal","strings":[{"label":"A","note":"{{note}}","order":0}]}]}
+            """;
+
+        var instrumentString = Assert.Single(Assert.Single(InstrumentCatalogJson.Deserialize(json)).Strings);
+        var expectedFrequency = 440 * Math.Pow(2, expectedCents / 1200d);
+
+        Assert.Equal(69, instrumentString.MidiNote);
+        Assert.Equal(expectedCents, instrumentString.CentsOffset);
+        Assert.Equal(note, instrumentString.DisplayNote);
+        Assert.Equal(expectedFrequency, instrumentString.GetTargetFrequency(), precision: 10);
     }
 
     [Fact]

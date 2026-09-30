@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\StringTuner.Core.csproj" />
     <None Include="..\..\Resources\Raw\instruments.json" Link="instruments.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Resources\Raw\instruments.schema.json" Link="instruments.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

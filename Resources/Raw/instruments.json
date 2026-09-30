@@ -6,41 +6,41 @@
       "tuningName": "Standard",
       "displayName": "Guitar · Standard",
       "strings": [
-        { "label": "6 (E2)", "midiNote": 40, "order": 0 },
-        { "label": "5 (A2)", "midiNote": 45, "order": 1 },
-        { "label": "4 (D3)", "midiNote": 50, "order": 2 },
-        { "label": "3 (G3)", "midiNote": 55, "order": 3 },
-        { "label": "2 (B3)", "midiNote": 59, "order": 4 },
-        { "label": "1 (E4)", "midiNote": 64, "order": 5 }
+        { "label": "6 (E2)", "note": "E2", "order": 0 },
+        { "label": "5 (A2)", "note": "A2", "order": 1 },
+        { "label": "4 (D3)", "note": "D3", "order": 2 },
+        { "label": "3 (G3)", "note": "G3", "order": 3 },
+        { "label": "2 (B3)", "note": "B3", "order": 4 },
+        { "label": "1 (E4)", "note": "E4", "order": 5 }
       ]
     },
     {
       "instrumentName": "Ukulele",
       "tuningName": "Standard G-C-E-A",
       "strings": [
-        { "label": "4 (G4)", "midiNote": 67, "order": 0 },
-        { "label": "3 (C4)", "midiNote": 60, "order": 1 },
-        { "label": "2 (E4)", "midiNote": 64, "order": 2 },
-        { "label": "1 (A4)", "midiNote": 69, "order": 3 }
+        { "label": "4 (G4)", "note": "G4", "order": 0 },
+        { "label": "3 (C4)", "note": "C4", "order": 1 },
+        { "label": "2 (E4)", "note": "E4", "order": 2 },
+        { "label": "1 (A4)", "note": "A4", "order": 3 }
       ]
     },
     {
       "instrumentName": "Mountain dulcimer",
       "tuningName": "DAA · 3 string",
       "strings": [
-        { "label": "Bass (D3)", "midiNote": 50, "order": 0 },
-        { "label": "Middle (A3)", "midiNote": 57, "order": 1 },
-        { "label": "Melody (A3)", "midiNote": 57, "order": 2 }
+        { "label": "Bass (D3)", "note": "D3", "order": 0 },
+        { "label": "Middle (A3)", "note": "A3", "order": 1 },
+        { "label": "Melody (A3)", "note": "A3", "order": 2 }
       ]
     },
     {
       "instrumentName": "Mountain dulcimer",
       "tuningName": "DAd · 4 string",
       "strings": [
-        { "label": "Bass (D3)", "midiNote": 50, "order": 0 },
-        { "label": "Middle (A3)", "midiNote": 57, "order": 1 },
-        { "label": "Melody 1 (D4)", "midiNote": 62, "order": 2 },
-        { "label": "Melody 2 (D4)", "midiNote": 62, "order": 3 }
+        { "label": "Bass (D3)", "note": "D3", "order": 0 },
+        { "label": "Middle (A3)", "note": "A3", "order": 1 },
+        { "label": "Melody 1 (D4)", "note": "D4", "order": 2 },
+        { "label": "Melody 2 (D4)", "note": "D4", "order": 3 }
       ]
     }
   ]

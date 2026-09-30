@@ -4,7 +4,7 @@ A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pi
 
 ## Design
 
-- `Core/` is a plain `net10.0` library. Instrument templates are loaded from the human-readable, versioned `Resources/Raw/instruments.json`; strings store MIDI note numbers and order, while target frequencies and octaves are derived.
+- `Core/` is a plain `net10.0` library. Instrument templates are loaded from the versioned, strict JSON file `Resources/Raw/instruments.json`; `Resources/Raw/instruments.schema.json` documents and validates its format. Strings store an exact pitch source and order.
 - `YinPitchDetector` uses YIN's cumulative-mean normalized difference function rather than the strongest FFT bin. This suits monophonic strings because it can find periodicity when harmonics dominate. It refines lag parabolically and rejects weak, clipped, or low-confidence frames.
 - `OverlappingPitchAnalyzer` consumes 44.1 kHz mono PCM in 8,192-sample windows with 4,096-sample hops. The 50% overlap gives a new estimate about every 93 ms after the initial 186 ms window. A log-frequency smoother reduces small display fluctuations and resets on a large note jump.
 - `Plugin.Maui.Audio` 4.x is the only audio runtime dependency. It is MIT-licensed, actively maintained, and provides live PCM streaming on both targets; its shared API avoids duplicating Android and Windows device backends. Capture and generated-tone playback remain behind `IAudioCapture` and `IAudioToneGenerator`.
@@ -19,7 +19,7 @@ A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pi
 - Mountain dulcimer, DAA, 3 string
 - Mountain dulcimer, DAd, 4 string
 
-Add a tuning by editing the `instruments` array in `Resources/Raw/instruments.json`. The audio and presentation code do not depend on the number of strings.
+Add a tuning by editing the `instruments` array in `Resources/Raw/instruments.json`. Each string must provide exactly one pitch source: `midiNote` (equal temperament follows the configured A4 reference), `frequency` (positive Hz, either a JSON number or numeric string; treated as an absolute frequency), or `note` (a note letter, optional Unicode accidental, and octave, such as `E2`, `A♯3`, or `A♭3`). The note field supports U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). ASCII `#` and `b` are intentionally not accepted. JSON comments and trailing commas are not accepted. The audio and presentation code do not depend on the number of strings.
 
 ## Build and test
 
