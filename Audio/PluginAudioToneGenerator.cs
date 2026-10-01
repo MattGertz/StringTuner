@@ -81,6 +81,10 @@ public sealed class PluginAudioToneGenerator(IAudioManager audioManager) : IAudi
     private static MemoryStream CreateLoopingWave(double frequency)
     {
         const int loopSeconds = 2;
+        const double secondHarmonic = 0.28;
+        const double thirdHarmonic = 0.12;
+        const double fourthHarmonic = 0.05;
+        const double peakNormalization = 1 + secondHarmonic + thirdHarmonic + fourthHarmonic;
         var cycleCount = (int)Math.Round(frequency * loopSeconds);
         var sampleCount = (int)Math.Round(cycleCount * SampleRate / frequency);
         var stream = new MemoryStream(44 + sampleCount * sizeof(short));
@@ -101,7 +105,12 @@ public sealed class PluginAudioToneGenerator(IAudioManager audioManager) : IAudi
 
         for (var index = 0; index < sampleCount; index++)
         {
-            var value = Math.Sin(2 * Math.PI * frequency * index / SampleRate) * short.MaxValue * 0.25;
+            var phase = 2 * Math.PI * frequency * index / SampleRate;
+            var waveform = Math.Sin(phase)
+                + secondHarmonic * Math.Sin(2 * phase)
+                + thirdHarmonic * Math.Sin(3 * phase)
+                + fourthHarmonic * Math.Sin(4 * phase);
+            var value = waveform / peakNormalization * short.MaxValue * 0.25;
             writer.Write((short)Math.Round(value));
         }
 
