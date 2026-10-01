@@ -49,8 +49,98 @@ public sealed class PitchAndTuningTests
 
         Assert.Contains("U+1D132", schemaText);
         Assert.Contains("U+1D135", schemaText);
-        Assert.Contains("ASCII # and b are not supported", schemaText);
+        Assert.Contains("ASCII # and b as typing aliases", schemaText);
     }
+
+    [Fact]
+    public void PitchConversionRoundsToNearestQuarterToneAndMidi()
+    {
+        var quarterSharpFrequency = 440 * Math.Pow(2, 50 / 1200d);
+        var quarterSharpText = PitchConversion.Convert(
+            PitchRepresentation.Frequency,
+            quarterSharpFrequency.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+            PitchRepresentation.Note,
+            440);
+
+        Assert.Equal("A𝄲4/B𝄵4", quarterSharpText);
+        Assert.Equal("70", PitchConversion.Convert(PitchRepresentation.Note, "A𝄲4/B𝄵4", PitchRepresentation.MidiNote, 440));
+        Assert.Equal(quarterSharpFrequency, PitchConversion.Resolve(PitchRepresentation.Note, quarterSharpText, 440), precision: 10);
+        Assert.Equal(220, PitchConversion.Resolve(PitchRepresentation.Frequency, "220", 442), precision: 8);
+        Assert.Equal("220.00", PitchConversion.Convert(PitchRepresentation.Note, "A3", PitchRepresentation.Frequency, 440));
+    }
+
+    [Fact]
+    public void NoteConversionPreservesNaturalSpellingAndNormalizesTypedAliases()
+    {
+        Assert.Equal("C3", PitchConversion.Convert(PitchRepresentation.Note, "C3", PitchRepresentation.Note, 440));
+        Assert.Equal("A♯4/B♭4", PitchConversion.NormalizeEditableNote("Bb4"));
+        Assert.Equal("C♯4/D♭4", PitchConversion.NormalizeEditableNote("C#4"));
+        Assert.Equal("466.16", PitchConversion.Convert(PitchRepresentation.Note, "Bb4", PitchRepresentation.Frequency, 440));
+        Assert.Equal("C4", PitchConversion.NormalizeEditableNote("B#3"));
+        Assert.Equal("A♯3/B♭3", PitchConversion.NormalizeEditableNote(" B b 3 "));
+        Assert.Equal("C3", PitchConversion.NormalizeEditableNote(" C 3 "));
+        Assert.Equal("C5", PitchConversion.NormalizeEditableNote("B#4/C5"));
+        Assert.Throws<FormatException>(() => PitchConversion.NormalizeEditableNote("B#4/C4"));
+
+        var c3Frequency = PitchMath.MidiToFrequency(48);
+        Assert.Equal("C3", PitchConversion.Convert(PitchRepresentation.Frequency,
+            c3Frequency.ToString("R", System.Globalization.CultureInfo.InvariantCulture), PitchRepresentation.Note, 440));
+        Assert.Equal(PitchMath.MidiToFrequency(58, 440), PitchConversion.Resolve(PitchRepresentation.Note, "A♯3/B♭3", 440), precision: 8);
+        Assert.Throws<FormatException>(() => PitchConversion.NormalizeEditableNote("A♯3/C4"));
+    }
+
+    [Fact]
+    public void CatalogSerializationPreservesPitchRepresentationAndUnicodeNote()
+    {
+        const string json = """
+            {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Round trip","strings":[
+              {"label":"Hz","frequency":220.5,"order":0},
+              {"label":"Microtone","note":"A𝄲4","order":1},
+              {"label":"MIDI","midiNote":69,"order":2}
+            ]}]}
+            """;
+        var original = InstrumentCatalogJson.Deserialize(json);
+
+        var serialized = InstrumentCatalogJson.Serialize(original);
+        using var serializedDocument = JsonDocument.Parse(serialized);
+        var serializedStrings = serializedDocument.RootElement.GetProperty("instruments")[0].GetProperty("strings");
+
+        Assert.Equal(220.5, serializedStrings[0].GetProperty("frequency").GetDouble());
+        Assert.Equal("A𝄲4/B𝄵4", serializedStrings[1].GetProperty("note").GetString());
+        Assert.Equal(69, serializedStrings[2].GetProperty("midiNote").GetInt32());
+        var roundTripped = Assert.Single(InstrumentCatalogJson.Deserialize(serialized)).Strings;
+        Assert.Equal(original[0].Strings[0].TargetFrequency, roundTripped[0].TargetFrequency, precision: 8);
+        Assert.Equal(original[0].Strings[0].Representation, roundTripped[0].Representation);
+        Assert.Equal(original[0].Strings[1].DisplayNote, roundTripped[1].DisplayNote);
+        Assert.Equal(original[0].Strings[1].CentsOffset, roundTripped[1].CentsOffset);
+        Assert.Equal(original[0].Strings[2].MidiNote, roundTripped[2].MidiNote);
+    }
+
+    [Fact]
+    public void CatalogMergeAddsAndResolvesConflictsWithoutPartialMutation()
+    {
+        var current = new[] { CreateTuning("Guitar", "Standard", "E2") };
+        var imported = new[]
+        {
+            CreateTuning("guitar", "STANDARD", "D2"),
+            CreateTuning("Ukulele", "Standard", "G4")
+        };
+
+        var keepCurrent = InstrumentCatalogMerge.Merge(current, imported, (_, _) => false);
+        var useImported = InstrumentCatalogMerge.Merge(current, imported, (_, _) => true);
+        var cancelled = InstrumentCatalogMerge.Merge(current, imported, (_, _) => null);
+
+        Assert.NotNull(keepCurrent);
+        Assert.Equal(2, keepCurrent.Count);
+        Assert.Equal("E2", keepCurrent[0].Strings[0].DisplayNote);
+        Assert.NotNull(useImported);
+        Assert.Equal("D2", useImported[0].Strings[0].DisplayNote);
+        Assert.Null(cancelled);
+        Assert.Equal("E2", current[0].Strings[0].DisplayNote);
+    }
+
+    private static InstrumentTuning CreateTuning(string instrumentName, string tuningName, string note) =>
+        new(instrumentName, tuningName, [new InstrumentString("String 1", 40, 0, NoteNameOverride: note, Representation: PitchRepresentation.Note)]);
 
     [Fact]
         public void CatalogParserRejectsCommentsAndTrailingCommas()
@@ -97,12 +187,12 @@ public sealed class PitchAndTuningTests
                 Assert.Equal(221, strings[0].GetTargetFrequency(442), precision: 8);
                 Assert.Equal(220, strings[1].GetTargetFrequency(442), precision: 8);
                 Assert.Equal(220.5, strings[2].GetTargetFrequency(442), precision: 8);
-                Assert.Equal("A♭3", strings[3].DisplayNote);
-                Assert.Equal("C♯4", strings[4].DisplayNote);
-                Assert.Equal("A♭3", strings[5].DisplayNote);
-                Assert.Equal("G♯4", strings[6].DisplayNote);
-                Assert.Equal(57, strings[3].MidiNote);
-                Assert.Equal(57, strings[5].MidiNote);
+                Assert.Equal("G♯3/A♭3", strings[3].DisplayNote);
+                Assert.Equal("C♯4/D♭4", strings[4].DisplayNote);
+                Assert.Equal("G♯3/A♭3", strings[5].DisplayNote);
+                Assert.Equal("G♯4/A♭4", strings[6].DisplayNote);
+                Assert.Equal(55, strings[3].MidiNote);
+                Assert.Equal(55, strings[5].MidiNote);
                 Assert.Equal(60, strings[4].MidiNote);
                 Assert.Equal(67, strings[6].MidiNote);
         }
@@ -131,6 +221,29 @@ public sealed class PitchAndTuningTests
         Assert.Throws<JsonException>(() => InstrumentCatalogJson.Deserialize("{ invalid"));
     }
 
+    [Fact]
+    public void StrictCatalogReaderAcceptsEquivalentSlashPairAndRejectsMismatchedPair()
+    {
+        const string singleAccidental = """
+            {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Complete on read","strings":[{"label":"B-flat","note":"B♭3","order":0}]}]}
+            """;
+        const string valid = """
+            {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Pair","strings":[{"label":"B-flat","note":"A♯3/B♭3","order":0}]}]}
+            """;
+        const string invalid = """
+            {"schemaVersion":1,"instruments":[{"instrumentName":"Test","tuningName":"Mismatch","strings":[{"label":"Bad","note":"A♯3/C4","order":0}]}]}
+            """;
+
+        var parsed = Assert.Single(InstrumentCatalogJson.Deserialize(valid));
+        Assert.Equal("A♯3/B♭3", parsed.Strings[0].DisplayNote);
+        Assert.Equal(PitchMath.MidiToFrequency(58), parsed.Strings[0].TargetFrequency, precision: 8);
+        var completed = Assert.Single(InstrumentCatalogJson.Deserialize(singleAccidental));
+        Assert.Equal("A♯3/B♭3", completed.Strings[0].DisplayNote);
+        var redundant = InstrumentCatalogJson.Deserialize(valid.Replace("A♯3/B♭3", "B♯3/C4", StringComparison.Ordinal));
+        Assert.Equal("C4", Assert.Single(redundant).Strings[0].DisplayNote);
+        Assert.Throws<InvalidDataException>(() => InstrumentCatalogJson.Deserialize(invalid));
+    }
+
     [Theory]
     [InlineData("♯", 100)]
     [InlineData("♭", -100)]
@@ -148,9 +261,8 @@ public sealed class PitchAndTuningTests
         var instrumentString = Assert.Single(Assert.Single(InstrumentCatalogJson.Deserialize(json)).Strings);
         var expectedFrequency = 440 * Math.Pow(2, expectedCents / 1200d);
 
-        Assert.Equal(69, instrumentString.MidiNote);
-        Assert.Equal(expectedCents, instrumentString.CentsOffset);
-        Assert.Equal(note, instrumentString.DisplayNote);
+        Assert.Equal(69 * 100 + expectedCents, instrumentString.MidiNote * 100 + instrumentString.CentsOffset);
+        Assert.Equal(PitchConversion.NormalizeEditableNote(note), instrumentString.DisplayNote);
         Assert.Equal(expectedFrequency, instrumentString.GetTargetFrequency(), precision: 10);
     }
 

@@ -271,6 +271,29 @@ public sealed class TunerViewModel : INotifyPropertyChanged, IAsyncDisposable
         }
     }
 
+    public async Task ReloadCatalogAsync(CancellationToken cancellationToken = default)
+    {
+        var instrumentName = _selectedInstrument?.InstrumentName;
+        var tuningName = _selectedInstrument?.TuningName;
+        var stringLabel = _selectedString?.Label;
+        _catalogInitialized = false;
+        await InitializeAsync(cancellationToken);
+
+        var previousInstrument = Instruments.FirstOrDefault(instrument =>
+            string.Equals(instrument.InstrumentName, instrumentName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(instrument.TuningName, tuningName, StringComparison.OrdinalIgnoreCase));
+        if (previousInstrument is not null)
+        {
+            SelectedInstrument = previousInstrument;
+            var previousString = StringOptions.FirstOrDefault(item =>
+                string.Equals(item.Label, stringLabel, StringComparison.OrdinalIgnoreCase));
+            if (previousString is not null)
+            {
+                SelectedString = previousString;
+            }
+        }
+    }
+
     public async Task StopAudioAsync()
     {
         await _audioModeLock.WaitAsync();

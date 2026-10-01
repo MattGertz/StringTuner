@@ -12,7 +12,7 @@ Include JSON import and export on both platforms. Import supports Replace and Me
 - `displayName` is the friendly name shown and edited in the row.
 - Keep `instrumentName` and `tuningName` as distinct catalog identity/metadata fields. Require them when creating an entry; they may be edited in an instrument details form if the UI exposes those fields.
 - A tuning entry owns its individual string rows. Each string has a label and one pitch source (`frequency`, `note`, or `midiNote`), consistent with the JSON Schema.
-- The note format accepts Unicode accidental symbols only: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). ASCII `#` and `b` are unsupported. Note spelling is retained for display.
+- Committed note format uses Unicode accidental symbols: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). The editor accepts ASCII `#` and `b` while typing, strips whitespace, then normalizes to Unicode on commit. Enharmonic pairs use slash notation, such as `A♯3/B♭3`, and both spellings must resolve to the same pitch. Natural spellings are preferred when equivalent; B-sharp 3 canonicalizes to C4.
 
 ## Editor Layout and Interaction
 

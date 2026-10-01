@@ -54,8 +54,8 @@
         },
         "note": {
           "type": "string",
-          "description": "A-G note letter, optional Unicode accidental, then octave. Accidentals: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50), U+1D133 quarter-tone flat (-50), U+1D134 three-quarter-tone sharp (+150), U+1D135 three-quarter-tone flat (-150). ASCII # and b are not supported.",
-          "pattern": "^[A-Ga-g](?:\\u266F|\\u266D|\\uD834\\uDD32|\\uD834\\uDD33|\\uD834\\uDD34|\\uD834\\uDD35)?-?[0-9]{1,2}$"
+          "description": "A note is a letter, optional Unicode accidental, and octave. An accidental may be stored as an enharmonic pair separated by '/'; both sides must resolve to the same pitch. When reading a single accidental, StringTuner fills in its alternate spelling. Redundant spellings such as B-sharp, E-sharp, F-flat, and C-flat canonicalize to the equivalent natural note. Accidentals: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50), U+1D133 quarter-tone flat (-50), U+1D134 three-quarter-tone sharp (+150), U+1D135 three-quarter-tone flat (-150). The editor accepts ASCII # and b as typing aliases but commits Unicode symbols; strict JSON must use Unicode.",
+          "pattern": "^[A-Ga-g](?:\\u266F|\\u266D|\\uD834\\uDD32|\\uD834\\uDD33|\\uD834\\uDD34|\\uD834\\uDD35)?-?[0-9]{1,2}(?:/[A-Ga-g](?:\\u266F|\\u266D|\\uD834\\uDD32|\\uD834\\uDD33|\\uD834\\uDD34|\\uD834\\uDD35)?-?[0-9]{1,2})?$"
         }
       },
       "oneOf": [

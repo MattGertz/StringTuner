@@ -14,8 +14,8 @@ public sealed class JsonInstrumentCatalogProvider(ILogger<JsonInstrumentCatalogP
         var checkedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var filePaths = new[]
         {
-            Path.Combine(AppContext.BaseDirectory, FileName),
-            Path.Combine(FileSystem.AppDataDirectory, FileName)
+            Path.Combine(FileSystem.AppDataDirectory, FileName),
+            Path.Combine(AppContext.BaseDirectory, FileName)
         };
 
         foreach (var path in filePaths)

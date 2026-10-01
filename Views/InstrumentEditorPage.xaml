@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:StringTuner.ViewModels"
+             x:Class="StringTuner.Views.InstrumentEditorPage"
+             BackgroundColor="#F0F1EB"
+             Title="Instrument editor">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="18,14" RowSpacing="10">
+            <VerticalStackLayout Grid.Row="0" Spacing="12">
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="INSTRUMENTS &amp; TUNINGS" FontSize="17" FontAttributes="Bold" TextColor="#1B2826" />
+                        <Label Text="EDIT STRINGS AND OPEN PITCHES" FontSize="10" CharacterSpacing="1.2" TextColor="#75817B" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1" Text="+ Add tuning" Clicked="OnAddInstrumentClicked"
+                            BackgroundColor="#1B2826" TextColor="#F2F4EE" CornerRadius="5" Padding="12,8" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <Button Text="Import JSON" Clicked="OnImportClicked" BackgroundColor="#D9E8D8" TextColor="#1B2826" CornerRadius="5" />
+                    <Button Grid.Column="1" Text="Export JSON" Clicked="OnExportClicked" BackgroundColor="#D9E8D8" TextColor="#1B2826" CornerRadius="5" />
+                </Grid>
+
+                <Label Text="{Binding StatusMessage}" IsVisible="{Binding HasStatusMessage}"
+                       FontSize="12" TextColor="#47796F" LineBreakMode="WordWrap">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding StatusIsError}" Value="True">
+                            <Setter Property="TextColor" Value="#A3452F" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+            </VerticalStackLayout>
+
+                <ScrollView x:Name="EditorScrollView" Grid.Row="1" VerticalScrollBarVisibility="Default">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding InstrumentRows}" Spacing="9">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="#FBFCF8" Stroke="#D6DBD4" StrokeThickness="1" Padding="12,10"
+                                    Loaded="OnInstrumentRowLoaded">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="6" /></Border.StrokeShape>
+                                <VerticalStackLayout Spacing="9">
+                                    <Grid ColumnDefinitions="38,*,Auto" ColumnSpacing="8">
+                                        <Button Text="{Binding ExpandGlyph}"
+                                                Command="{Binding ToggleExpandedCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="#E8ECE5" TextColor="#1B2826" CornerRadius="4" Padding="0" />
+                                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                            <Label Text="FRIENDLY DISPLAY NAME" FontSize="9" CharacterSpacing="0.5" TextColor="#75817B" />
+                                            <Entry Text="{Binding DisplayName}" Placeholder="Friendly tuning name"
+                                                   TextColor="#17211F" PlaceholderColor="#75817B" FontAttributes="Bold" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="2" Text="Delete"
+                                                Command="{Binding DeleteCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="#F4E5DF" TextColor="#8B3C2B" CornerRadius="4" Padding="10,6" />
+                                    </Grid>
+
+                                    <VerticalStackLayout IsVisible="{Binding IsExpanded}" Spacing="9" Padding="8,0,0,0">
+                                        <Label Text="CATALOG IDENTITY" FontSize="9" CharacterSpacing="0.7" TextColor="#75817B" />
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                            <Entry Text="{Binding InstrumentName}" Placeholder="Instrument name" FontSize="13"
+                                                   TextColor="#17211F" PlaceholderColor="#75817B" />
+                                            <Entry Grid.Column="1" Text="{Binding TuningName}" Placeholder="Tuning name" FontSize="13"
+                                                   TextColor="#17211F" PlaceholderColor="#75817B" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                            <Label Text="STRINGS · LOWEST PITCH FIRST" FontSize="10" CharacterSpacing="0.7" TextColor="#75817B" VerticalTextAlignment="Center" />
+                                            <Button Grid.Column="1" Text="+ Add string"
+                                                    Command="{Binding AddStringCommand}"
+                                                    CommandParameter="{Binding .}"
+                                                    BackgroundColor="#E8ECE5" TextColor="#1B2826" CornerRadius="4" Padding="10,5" FontSize="12" />
+                                        </Grid>
+
+                                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Strings}" Spacing="6">
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate>
+                                                        <Border BackgroundColor="#F0F1EB" StrokeThickness="0" Padding="8,6">
+                                                        <Border.StrokeShape><RoundRectangle CornerRadius="5" /></Border.StrokeShape>
+                                                        <VerticalStackLayout Spacing="4">
+                                                                <Grid ColumnDefinitions="*,118,100,Auto" ColumnSpacing="4">
+                                                                 <Entry Text="{Binding Label}" Placeholder="String label" FontSize="12"
+                                                                     MinimumWidthRequest="0" HorizontalOptions="Fill"
+                                                                     TextColor="#17211F" PlaceholderColor="#75817B" />
+                                                                 <Picker Grid.Column="1" ItemsSource="{x:Static vm:InstrumentEditorViewModel.AvailablePitchKinds}"
+                                                                                                                                        SelectedItem="{Binding ToneKind}" FontSize="12" WidthRequest="118" MinimumWidthRequest="118"
+                                                                      TextColor="#17211F" TitleColor="#75817B" />
+                                                                 <Entry Grid.Column="2" Text="{Binding ToneValue}" Placeholder="Tone" FontSize="12"
+                                                                                                                                         WidthRequest="100" MinimumWidthRequest="100" HorizontalOptions="Fill"
+                                                                                                                                         Unfocused="OnToneValueUnfocused"
+                                                                       TextColor="#17211F" PlaceholderColor="#75817B" BackgroundColor="#FBFCF8">
+                                                                    <Entry.Triggers>
+                                                                        <DataTrigger TargetType="Entry" Binding="{Binding HasValidationError}" Value="True">
+                                                                            <Setter Property="BackgroundColor" Value="#F4D8D1" />
+                                                                            <Setter Property="TextColor" Value="#7D281B" />
+                                                                        </DataTrigger>
+                                                                    </Entry.Triggers>
+                                                                </Entry>
+                                                                 <Button Grid.Column="3" Text="×"
+                                                                      Command="{Binding DeleteCommand}"
+                                                                      CommandParameter="{Binding .}"
+                                                                      BackgroundColor="#F4E5DF" TextColor="#8B3C2B" CornerRadius="4" Padding="8,4" />
+                                                            </Grid>
+                                                            <HorizontalStackLayout IsVisible="{Binding IsNote}" Spacing="4"
+                                                                                   Loaded="OnAccidentalPanelLoaded">
+                                                                <Label Text="Add accidental:" FontSize="10" TextColor="#75817B" VerticalTextAlignment="Center" />
+                                                                <Button Text="𝄵 −150¢" Command="{Binding ThreeQuarterFlatCommand}" FontSize="10" Padding="7,3" HeightRequest="30" />
+                                                                <Button Text="♭ −100¢" Command="{Binding FlatCommand}" FontSize="10" Padding="7,3" HeightRequest="30" />
+                                                                <Button Text="𝄳 −50¢" Command="{Binding QuarterFlatCommand}" FontSize="10" Padding="7,3" HeightRequest="30" />
+                                                                <Button Text="𝄲 +50¢" Command="{Binding QuarterSharpCommand}" FontSize="10" Padding="7,3" HeightRequest="30" />
+                                                                <Button Text="♯ +100¢" Command="{Binding SharpCommand}" FontSize="10" Padding="7,3" HeightRequest="30" />
+                                                                <Button Text="𝄴 +150¢" Command="{Binding ThreeQuarterSharpCommand}" FontSize="10" Padding="7,3" HeightRequest="30" />
+                                                            </HorizontalStackLayout>
+                                                            <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}"
+                                                                   FontSize="10" TextColor="#A3452F" LineBreakMode="WordWrap" />
+                                                        </VerticalStackLayout>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
+                                        </VerticalStackLayout>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Button Text="Cancel" Clicked="OnCancelClicked" BackgroundColor="#E3E6DF" TextColor="#1B2826" CornerRadius="5" HeightRequest="48" />
+            <Button Grid.Column="1" Text="Save" Command="{Binding SaveCommand}" BackgroundColor="#1B2826" TextColor="#F2F4EE" FontAttributes="Bold" CornerRadius="5" HeightRequest="48" />
+        </Grid>
+    </Grid>
+</ContentPage>

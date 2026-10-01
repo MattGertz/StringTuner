@@ -1,12 +1,20 @@
 namespace StringTuner.Core.Domain;
 
+public enum PitchRepresentation
+{
+    MidiNote,
+    Frequency,
+    Note
+}
+
 public sealed record InstrumentString(
     string Label,
     int MidiNote,
     int Order,
     double? FrequencyOverride = null,
     string? NoteNameOverride = null,
-    int CentsOffset = 0)
+    int CentsOffset = 0,
+    PitchRepresentation Representation = PitchRepresentation.MidiNote)
 {
     public int Octave => MidiNote / 12 - 1;
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace StringTuner.Core.Domain;
 
@@ -10,6 +11,38 @@ public static class InstrumentCatalogJson
     {
         PropertyNameCaseInsensitive = true
     };
+
+    private static readonly JsonSerializerOptions WriteOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+
+    public static string Serialize(IReadOnlyList<InstrumentTuning> instruments)
+    {
+        ArgumentNullException.ThrowIfNull(instruments);
+        var document = new InstrumentCatalogWriteDocument
+        {
+            SchemaVersion = SupportedSchemaVersion,
+            Instruments = instruments.Select(instrument => new InstrumentTuningWriteDocument
+            {
+                InstrumentName = instrument.InstrumentName,
+                TuningName = instrument.TuningName,
+                DisplayName = instrument.DisplayName,
+                Metadata = instrument.Metadata is null ? null : new Dictionary<string, string>(instrument.Metadata),
+                Strings = instrument.Strings.Select(item => new InstrumentStringWriteDocument
+                {
+                    Label = item.Label,
+                    Order = item.Order,
+                    MidiNote = item.Representation == PitchRepresentation.MidiNote ? item.MidiNote : null,
+                    Frequency = item.Representation == PitchRepresentation.Frequency ? item.FrequencyOverride : null,
+                    Note = item.Representation == PitchRepresentation.Note ? item.NoteNameOverride : null
+                }).ToList()
+            }).ToList()
+        };
+
+        return JsonSerializer.Serialize(document, WriteOptions);
+    }
 
     public static IReadOnlyList<InstrumentTuning> Deserialize(string json)
     {
@@ -98,9 +131,11 @@ public static class InstrumentCatalogJson
         var centsOffset = 0;
         double? frequencyOverride = null;
         string? noteNameOverride = null;
+        PitchRepresentation representation;
 
         if (hasMidiNote)
         {
+            representation = PitchRepresentation.MidiNote;
             if (source.MidiNote.ValueKind != JsonValueKind.Number || !source.MidiNote.TryGetInt32(out midiNote))
             {
                 throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' has an invalid midiNote.");
@@ -108,6 +143,7 @@ public static class InstrumentCatalogJson
         }
         else if (hasFrequency)
         {
+            representation = PitchRepresentation.Frequency;
             if (!TryReadFrequency(source.Frequency, out var frequency))
             {
                 throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' has an invalid frequency; use a positive number of hertz.");
@@ -124,15 +160,27 @@ public static class InstrumentCatalogJson
         }
         else
         {
+            representation = PitchRepresentation.Note;
             if (source.Note.ValueKind != JsonValueKind.String)
             {
                 throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' must have a string note such as E2 or Ab3.");
             }
 
-            noteNameOverride = source.Note.GetString();
-            if (!PitchMath.TryParseNote(noteNameOverride, out midiNote, out centsOffset))
+            var sourceNote = source.Note.GetString();
+            if (sourceNote is null || sourceNote.Any(char.IsWhiteSpace) ||
+                sourceNote.Split('/').Any(part => part.Length > 1 && part[1] is '#' or 'b'))
             {
-                throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' has an invalid note; use a note such as E2, A♯3, A♭3, or a quarter-tone accidental.");
+                throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' has a non-canonical note; use Unicode accidentals and no whitespace.");
+            }
+
+            try
+            {
+                noteNameOverride = PitchConversion.NormalizeEditableNote(sourceNote);
+                (midiNote, centsOffset) = PitchConversion.ParseStrictNoteValue(noteNameOverride);
+            }
+            catch (FormatException)
+            {
+                throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' has an invalid note or enharmonic pair.");
             }
         }
 
@@ -141,7 +189,7 @@ public static class InstrumentCatalogJson
             throw new InvalidDataException($"String '{source.Label}' in '{tuningName}' has a MIDI pitch outside 0 through 127.");
         }
 
-        return new InstrumentString(source.Label!, midiNote, source.Order, frequencyOverride, noteNameOverride, centsOffset);
+        return new InstrumentString(source.Label!, midiNote, source.Order, frequencyOverride, noteNameOverride, centsOffset, representation);
     }
 
     private static bool TryReadFrequency(JsonElement value, out double frequency)
@@ -188,5 +236,41 @@ public static class InstrumentCatalogJson
         public JsonElement Note { get; set; }
 
         public int Order { get; set; }
+    }
+
+    private sealed class InstrumentCatalogWriteDocument
+    {
+        public int SchemaVersion { get; set; }
+
+        public List<InstrumentTuningWriteDocument> Instruments { get; set; } = [];
+    }
+
+    private sealed class InstrumentTuningWriteDocument
+    {
+        public string InstrumentName { get; set; } = string.Empty;
+
+        public string TuningName { get; set; } = string.Empty;
+
+        public string? DisplayName { get; set; }
+
+        public Dictionary<string, string>? Metadata { get; set; }
+
+        public List<InstrumentStringWriteDocument> Strings { get; set; } = [];
+    }
+
+    private sealed class InstrumentStringWriteDocument
+    {
+        public string Label { get; set; } = string.Empty;
+
+        public int Order { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? MidiNote { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Frequency { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Note { get; set; }
     }
 }

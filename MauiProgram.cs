@@ -2,6 +2,7 @@
 using Plugin.Maui.Audio;
 using StringTuner.Audio;
 using StringTuner.Services;
+using StringTuner.Views;
 using StringTuner.ViewModels;
 
 namespace StringTuner;
@@ -22,8 +23,11 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IAudioCapture, PluginAudioCapture>();
 		builder.Services.AddSingleton<IAudioToneGenerator, PluginAudioToneGenerator>();
 		builder.Services.AddSingleton<IInstrumentCatalogProvider, JsonInstrumentCatalogProvider>();
+		builder.Services.AddSingleton<IInstrumentCatalogStore, InstrumentCatalogStore>();
 		builder.Services.AddSingleton<TunerViewModel>();
 		builder.Services.AddSingleton<MainPage>();
+		builder.Services.AddTransient<InstrumentEditorViewModel>();
+		builder.Services.AddTransient<InstrumentEditorPage>();
 
 #if DEBUG
 		builder.Logging.AddDebug();
