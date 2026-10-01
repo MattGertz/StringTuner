@@ -63,6 +63,7 @@ Generated\ Files/
 **/Generated\ Files/
 
 # MAUI / platform build outputs
+/Setup/MattsInstrumentTunerSetup.exe
 **/AppPackages/
 **/BundleArtifacts/
 **/Package.StoreAssociation.xml

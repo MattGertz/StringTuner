@@ -19,7 +19,7 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
 		<!-- Display name -->
-		<ApplicationTitle>StringTuner</ApplicationTitle>
+		<ApplicationTitle>Matt's Instrument Tuner</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.matthew.stringtuner</ApplicationId>
