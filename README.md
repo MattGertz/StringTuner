@@ -1,4 +1,4 @@
-# StringTuner
+# Matt's Instrument Tuner
 
 A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pitch analysis, and the MAUI presentation are kept in separate layers.
 
@@ -8,7 +8,7 @@ A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pi
 - `YinPitchDetector` uses YIN's cumulative-mean normalized difference function rather than the strongest FFT bin. This suits monophonic strings because it can find periodicity when harmonics dominate. It refines lag parabolically and rejects weak, clipped, or low-confidence frames.
 - `OverlappingPitchAnalyzer` consumes 44.1 kHz mono PCM in 8,192-sample windows with 4,096-sample hops. The 50% overlap gives a new estimate about every 93 ms after the initial 186 ms window. A log-frequency smoother reduces small display fluctuations and resets on a large note jump.
 - `Plugin.Maui.Audio` 4.x is the only audio runtime dependency. It is MIT-licensed, actively maintained, and provides live PCM streaming on both targets; its shared API avoids duplicating Android and Windows device backends. Capture and generated-tone playback remain behind `IAudioCapture` and `IAudioToneGenerator`.
-- The reference tone is a low-volume mono PCM sine wave with a near-cycle-aligned loop. Playback volume ramps at start and stop to avoid clicks.
+- The reference tone is a low-volume mono PCM waveform with the exact fundamental plus restrained second through fourth harmonics. Its near-cycle-aligned loop and start/stop volume ramps reduce clicks.
 - A4 defaults to 440 Hz and is saved across launches. Microphone access is requested when listening starts; denial and device failures remain visible in the signal status.
 - Windows reads `instruments.json` beside the executable and copies that sidecar into build/publish output. Android prefers an override in `FileSystem.AppDataDirectory` and falls back to the JSON packaged in the APK, because an APK has no editable adjacent executable directory. Invalid or missing data is reported in the UI and logged; it never silently substitutes hard-coded tunings.
 
@@ -19,17 +19,24 @@ A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pi
 - Mountain dulcimer, DAA, 3 string
 - Mountain dulcimer, DAd, 4 string
 
-Each string has exactly one pitch source: `midiNote` (equal temperament follows the configured A4 reference), `frequency` (positive Hz, treated as absolute), or `note`. Notes may be a letter, accidental, and octave, or an enharmonic pair separated by `/`, such as `A♯3/B♭3`; both spellings must resolve to the same pitch. When a single accidental is read, StringTuner fills in its enharmonic spelling. Natural spellings are preferred for redundant accidental forms, so B-sharp 3 canonicalizes to C4 rather than `B♯3/C4`. Supported symbols are U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). The editor accepts ASCII `#` and `b` as typing aliases and converts them to Unicode on commit; whitespace is stripped. Strict JSON uses Unicode symbols and contains no comments or trailing commas. The audio and presentation code do not depend on the number of strings.
+Each string has exactly one pitch source: `midiNote` (equal temperament follows the configured A4 reference), `frequency` (positive Hz, treated as absolute), or `note`. Notes may be a letter, accidental, and octave, or an enharmonic pair separated by `/`, such as `A♯3/B♭3`; both spellings must resolve to the same pitch. When a single accidental is entered or read, StringTuner fills in its enharmonic spelling (for example, `B♭3` becomes `A♯3/B♭3`). Natural spellings are preferred for redundant accidental forms, so B-sharp 3 canonicalizes to C4 rather than `B♯3/C4`. Supported symbols are U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). The editor accepts ASCII `#` and `b` as typing aliases, strips whitespace, and commits canonical Unicode notation. Strict JSON uses Unicode symbols and contains no comments or trailing commas. The audio and presentation code do not depend on the number of strings.
+
+## Instrument Editor
+
+The tuner screen's Edit button opens the shared Windows/Android catalog editor. It supports adding and deleting instrument-tuning entries and strings, expanding entries, and sorting strings live by pitch. Pitch can be edited as frequency, note, or MIDI; switching types applies the documented rounding. Save validates and atomically writes an app-data override on either platform; Cancel discards the draft. JSON import supports Replace and Merge with conflict choices, while export uses the native share UI. Switching to Note scrolls the accidental controls into view without changing focus.
 
 ## Build and test
 
 ```powershell
 dotnet test tests\StringTuner.Core.Tests\StringTuner.Core.Tests.csproj
-dotnet build StringTuner.csproj -f net10.0-windows10.0.19041.0 -c Release
+$env:ANDROID_HOME = 'C:\Program Files (x86)\Android\android-sdk'
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+dotnet publish StringTuner.csproj -f net10.0-windows10.0.19041.0 -c Release -p:WindowsPackageType=None
 dotnet publish StringTuner.csproj -f net10.0-android -c Release -p:AndroidPackageFormats=apk
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" Packaging\StringTuner.iss
 ```
 
-Android publish requires the Android workload and produces an APK in the Release output directory. Production distribution should use the developer's own Android signing key.
+Windows publish stages the app and adjacent catalog/schema under `bin\Release\net10.0-windows10.0.19041.0\win-x64\publish`; Inno Setup creates `Setup\MattsInstrumentTunerSetup.exe`. Android publish produces a sideloadable APK under `bin\Release\net10.0-android`. Production Android distribution should use the developer's own signing key.
 
 ## Package checks
 

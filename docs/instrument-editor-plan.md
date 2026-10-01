@@ -2,9 +2,9 @@
 
 ## Goal and Scope
 
-Add a shared .NET MAUI instrument/tuning editor available on Windows and Android. Open it from a clearly visible button on the tuner screen. It edits the catalog as a working draft and only persists after Save. Cancel discards all draft edits.
+Status: implemented as a shared .NET MAUI editor on Windows and Android. Open it from the tuner screen's Edit button. It edits the catalog as a working draft and only persists after Save. Cancel discards all draft edits.
 
-Include JSON import and export on both platforms. Import supports Replace and Merge modes. This plan is for implementation; no editor code has been added yet.
+JSON import and export are implemented on both platforms. Import supports Replace and Merge modes.
 
 ## Catalog Concepts
 
@@ -12,7 +12,7 @@ Include JSON import and export on both platforms. Import supports Replace and Me
 - `displayName` is the friendly name shown and edited in the row.
 - Keep `instrumentName` and `tuningName` as distinct catalog identity/metadata fields. Require them when creating an entry; they may be edited in an instrument details form if the UI exposes those fields.
 - A tuning entry owns its individual string rows. Each string has a label and one pitch source (`frequency`, `note`, or `midiNote`), consistent with the JSON Schema.
-- Committed note format uses Unicode accidental symbols: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). The editor accepts ASCII `#` and `b` while typing, strips whitespace, then normalizes to Unicode on commit. Enharmonic pairs use slash notation, such as `A♯3/B♭3`, and both spellings must resolve to the same pitch. Natural spellings are preferred when equivalent; B-sharp 3 canonicalizes to C4.
+- Committed note format uses Unicode accidental symbols: U+266F sharp (+100 cents), U+266D flat (-100 cents), U+1D132 quarter-tone sharp (+50 cents), U+1D133 quarter-tone flat (-50 cents), U+1D134 three-quarter-tone sharp (+150 cents), and U+1D135 three-quarter-tone flat (-150 cents). The editor accepts ASCII `#` and `b` while typing, strips whitespace, then normalizes to Unicode on commit. Accidental notes are committed as enharmonic pairs where an alternative exists, such as `A♯3/B♭3`; the reader fills a missing pair side and validates that both sides resolve to the same pitch. Natural notes are preferred over redundant spellings: B-sharp 3 becomes C4, not `B♯3/C4`.
 
 ## Editor Layout and Interaction
 
@@ -23,18 +23,19 @@ Include JSON import and export on both platforms. Import supports Replace and Me
 - Keep Save and Cancel as explicit, persistent editor actions. Cancel discards the complete draft. Save validates the complete catalog before writing.
 - If the user attempts to leave with unsaved edits, ask whether to discard or return to editing.
 - Entering the editor stops active audio modes so the editor does not leave microphone capture or the reference tone running behind it.
+- Switching a string to Note mode scrolls the accidental-symbol controls fully into view without changing keyboard focus. The scroll uses the accidental strip's measured position and only adjusts the viewport enough to reveal the full strip above the fixed Save/Cancel footer.
 
 ## Tone Editing and Precision Conversion
 
 Expose a tone-kind selector with three modes:
 
-1. Frequency: an exact positive frequency in Hz; highest precision.
+1. Frequency: a positive frequency in Hz, committed and saved to two decimal places.
 2. Note: note letter/octave with the supported Unicode accidental set, in 50-cent increments; middle precision.
 3. MIDI: integer note number; semitone precision.
 
 Changing the mode converts the current draft value immediately and lossy conversion is intentional:
 
-- Frequency to Note: choose the nearest quarter-tone pitch relative to the configured equal-tempered A4 reference, then spell it using the supported Unicode accidental notation.
+- Frequency to Note: choose the nearest quarter-tone pitch relative to the configured equal-tempered A4 reference, then spell it using the supported Unicode accidental notation and generate its enharmonic pair where available.
 - Frequency to MIDI: choose the nearest semitone MIDI pitch relative to the configured A4 reference.
 - Note to MIDI: choose the nearest semitone MIDI pitch, dropping the note accidental's cents offset.
 - MIDI to Note/Frequency and Note to Frequency preserve their represented pitch as closely/exactly as that target format permits.
@@ -42,6 +43,8 @@ Changing the mode converts the current draft value immediately and lossy convers
 - When a pitch edit changes its resolved frequency, immediately resort that tuning's strings from lowest frequency to highest. Keep equal-pitch strings stable in their previous relative order; a newly added tied string follows existing ties. Persist `order` to match the resulting displayed order.
 - Sorting is based on resolved frequency, including cents offsets and the active A4 reference for note/MIDI modes. Explicit Hz values remain absolute and do not shift when A4 changes.
 - Maintain editing focus/selection sensibly when a row moves due to live resorting.
+- Keep the note-tone cell visibly red and show an inline validation message for invalid notes or mismatched enharmonic pairs. Do not clear focus as a side effect of scrolling.
+- An accidental note entered as a single spelling is completed to an enharmonic slash pair at commit/load when a partner exists. If either spelling is a natural, store the natural spelling alone (for example, `B♯3` becomes `C4`).
 
 ## Validation
 
@@ -71,16 +74,9 @@ Validate during editing and again on Save/import:
 - Merge uses the case-insensitive pair `(instrumentName, tuningName)` as the key. New pairs are added. For a matching pair, show a conflict choice (keep current or use imported) before applying. Never partially apply an invalid import.
 - Export serializes the current draft or saved catalog as strict, indented JSON in the existing schema and uses the native save/share UI. Export must not modify the active catalog.
 
-## Implementation Outline
+## Implementation and Verification
 
-1. Extract catalog cloning, serialization, validation, pitch conversions, and merge behavior into testable non-UI services.
-2. Add/extend domain edit models to keep pitch kind/value and resolve exact frequency while preserving Unicode note spelling.
-3. Update catalog loading precedence to app-data override, then Windows sidecar, then packaged Android JSON.
-4. Implement editor ViewModel with draft isolation, commands, live pitch sorting, validation, import, export, Save, and Cancel.
-5. Add the MAUI editor page and navigation button; implement responsive dynamic instrument rows and expandable string subrows.
-6. Add atomic cross-platform app-data persistence and file picker/export/share integration.
-7. Add unit tests for precision conversions, all accidental symbols, tie rounding, live sort stability, validation, import Replace/Merge conflicts, strict JSON, and persistence failure behavior.
-8. Build Windows and Android, run Core tests, verify import/export paths on both platforms, then manually test add/edit/delete/reorder/save/cancel on Windows and an Android device.
+Implemented: catalog editing UI, pitch conversion and live sorting, atomic app-data persistence, import Replace/Merge, share-based export, Unicode enharmonic slash pairs, and note validation. Windows and Android Release/Debug targets have built successfully; the Core suite has 33 passing tests. The Windows editor has been manually exercised, including invalid-pitch feedback and the accidental-strip scroll. Android installation has been verified; native file-picker/share behavior and accidental-strip scrolling should still be checked on-device.
 
 ## Acceptance Criteria
 
