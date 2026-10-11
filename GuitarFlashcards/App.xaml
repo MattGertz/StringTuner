@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="GuitarFlashcards.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <Color x:Key="PageBackground">#F4F3ED</Color>
+            <Color x:Key="Ink">#202A27</Color>
+            <Color x:Key="Accent">#146C67</Color>
+            <Color x:Key="MutedInk">#65716D</Color>
+            <Color x:Key="Rule">#CFD5D0</Color>
+            <Style TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+            </Style>
+            <Style TargetType="Entry">
+                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                <Setter Property="PlaceholderColor" Value="{StaticResource MutedInk}" />
+                <Setter Property="BackgroundColor" Value="White" />
+            </Style>
+            <Style TargetType="Switch">
+                <Setter Property="ThumbColor" Value="{StaticResource Ink}" />
+                <Setter Property="OnColor" Value="{StaticResource Accent}" />
+            </Style>
+            <Style TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#146C67" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="BorderColor" Value="#0E514D" />
+                <Setter Property="BorderWidth" Value="1" />
+                <Setter Property="Padding" Value="14,9" />
+                <Setter Property="MinimumHeightRequest" Value="42" />
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <Setter.Value>
+                        <VisualStateGroupList>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="#0E514D" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="#0A403D" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="#D9DFDC" />
+                                        <Setter Property="TextColor" Value="#35413D" />
+                                        <Setter Property="BorderColor" Value="#9BA7A2" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateGroupList>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

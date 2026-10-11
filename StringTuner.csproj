@@ -73,7 +73,8 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.12" />
 		<PackageReference Include="Plugin.Maui.Audio" Version="4.0.0" />
 		<ProjectReference Include="Core\StringTuner.Core.csproj" />
-		<Compile Remove="Core\**\*.cs;tests\**\*.cs" />
+		<Compile Remove="Core\**\*.cs;tests\**\*.cs;GuitarFlashcards\**\*.cs;GuitarFlashcards.Core\**\*.cs" />
+		<MauiXaml Remove="GuitarFlashcards\**\*.xaml" />
 	</ItemGroup>
 
 </Project>

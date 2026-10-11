@@ -1,0 +1,59 @@
+using GuitarFlashcards.ViewModels;
+using GuitarFlashcards.Views;
+
+namespace GuitarFlashcards;
+
+public partial class MainPage : ContentPage
+{
+    private readonly FlashcardsViewModel _viewModel;
+    private readonly IServiceProvider _services;
+    private SettingsPage? _settingsPage;
+
+    public MainPage(FlashcardsViewModel viewModel, IServiceProvider services)
+    {
+        InitializeComponent();
+        _viewModel = viewModel;
+        _services = services;
+        BindingContext = viewModel;
+        viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        try
+        {
+            await _viewModel.InitializeAsync();
+            RefreshPracticeDiagram();
+        }
+        catch (Exception exception)
+        {
+            await DisplayAlertAsync("Configuration unavailable", exception.Message, "OK");
+        }
+    }
+
+    private async void OnSettingsClicked(object? sender, EventArgs eventArgs)
+    {
+        _settingsPage ??= _services.GetRequiredService<SettingsPage>();
+        await Navigation.PushModalAsync(_settingsPage);
+    }
+
+    private async void OnStartStopClicked(object? sender, EventArgs eventArgs) =>
+        await _viewModel.TogglePracticeAsync();
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        if (eventArgs.PropertyName is nameof(FlashcardsViewModel.PracticeFingering)
+            or nameof(FlashcardsViewModel.ShowPracticeFingering))
+        {
+            RefreshPracticeDiagram();
+        }
+    }
+
+    private void RefreshPracticeDiagram()
+    {
+        PracticeDiagramHost.Content = _viewModel.ShowPracticeFingering && _viewModel.PracticeFingering is not null
+            ? new FingeringDiagramView(_viewModel.PracticeFingering, 1, false)
+            : null;
+    }
+}

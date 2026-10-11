@@ -1,5 +1,7 @@
 # Matt's Instrument Tuner
 
+The separate chord-practice app is documented in [GuitarFlashcards/README.md](GuitarFlashcards/README.md). Both apps are included in `StringTuner.sln` and keep their core libraries independent.
+
 A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pitch analysis, and the MAUI presentation are kept in separate layers.
 
 ## Design
