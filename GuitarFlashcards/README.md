@@ -1,4 +1,4 @@
-# Guitar Flashcards
+# Matt's Guitar Flashcards
 
 An independent .NET MAUI chord practice app for Windows and Android. The tuner does not reference this app or its core library. `GuitarFlashcards.Core` contains the platform-independent fingering, note derivation, chord identification, configuration, persistence, synthesis, and practice-loop logic.
 
@@ -29,9 +29,12 @@ Schema version 1 stores stable chord IDs, display names, six complete string sta
 ```powershell
 dotnet test StringTuner.sln
 dotnet publish GuitarFlashcards\GuitarFlashcards.csproj -f net10.0-windows10.0.19041.0 -c Release -p:WindowsPackageType=None
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" Packaging\GuitarFlashcards.iss
 $env:ANDROID_HOME = 'C:\Program Files (x86)\Android\android-sdk'
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 dotnet publish GuitarFlashcards\GuitarFlashcards.csproj -f net10.0-android -c Release -p:AndroidPackageFormats=apk
 ```
+
+The Windows setup installer is written to `Setup\MattsGuitarFlashcardsSetup.exe`. It installs the unpackaged app under Program Files, creates a Start Menu shortcut, and offers an optional desktop shortcut.
 
 Core tests cover open/fretted/muted states, common C/G/D/E/Em fingerings, inversions, incomplete/rootless and ambiguous note sets, persistent round-trips and atomic invalid imports, fractional timing, countdown and stop behavior, enabled filtering, and generated open/fretted/polyphonic WAV data. Build success does not constitute physical playback testing: manual Windows speaker and Android device playback still need listening checks. No microphone capture or microphone analysis is included.

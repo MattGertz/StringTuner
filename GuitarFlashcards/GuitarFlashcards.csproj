@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
-    <ApplicationTitle>Guitar Flashcards</ApplicationTitle>
+    <ApplicationTitle>Matt's Guitar Flashcards</ApplicationTitle>
     <ApplicationId>com.matthew.guitarflashcards</ApplicationId>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>

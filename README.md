@@ -1,6 +1,6 @@
 # Matt's Instrument Tuner
 
-The separate chord-practice app is documented in [GuitarFlashcards/README.md](GuitarFlashcards/README.md). Both apps are included in `StringTuner.sln` and keep their core libraries independent.
+The separate chord-practice app is documented in [GuitarFlashcards/README.md](GuitarFlashcards/README.md); its Windows installer is built with `Packaging/GuitarFlashcards.iss`. Both apps are included in `StringTuner.sln` and keep their core libraries independent.
 
 A .NET MAUI tuner for Windows and Android. Instrument/tuning data, audio I/O, pitch analysis, and the MAUI presentation are kept in separate layers.
 
@@ -48,3 +48,27 @@ dotnet list StringTuner.csproj package --vulnerable
 dotnet list tests\StringTuner.Core.Tests\StringTuner.Core.Tests.csproj package --outdated
 dotnet list tests\StringTuner.Core.Tests\StringTuner.Core.Tests.csproj package --vulnerable
 ```
+
+## License
+
+MIT License
+
+Copyright (c) 2026 Matthew Gertz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
