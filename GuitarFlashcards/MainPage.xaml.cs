@@ -52,8 +52,8 @@ public partial class MainPage : ContentPage
 
     private void RefreshPracticeDiagram()
     {
-        PracticeDiagramHost.Content = _viewModel.ShowPracticeFingering && _viewModel.PracticeFingering is not null
-            ? new FingeringDiagramView(_viewModel.PracticeFingering, 1, false)
+        PracticeDiagramHost.Content = _viewModel.ShowPracticeFingering
+            ? new FingeringDiagramView(_viewModel.PracticeFingering, 1, false, autoScrollToChord: true, showScrollBar: false)
             : null;
     }
 }

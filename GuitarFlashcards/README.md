@@ -12,6 +12,10 @@ The fully open standard guitar yields pitch classes E, G, B, D, and A. The ident
 
 `BarreInference` spans from the first to the last string sharing a finger number and fret, even when intervening strings have another assignment. The fingering diagram draws the connector between the matching finger markers. This is a visual heuristic only; it does not add barre objects or affect note derivation/chord naming.
 
+The fingering diagram contains frets 1–24 with a five-fret viewport. The editor and library preview scroll manually; the editor preserves its scroll position while the fingering changes. During practice, the viewport follows each chord's fretted range and keeps low positions anchored at fret 1. The editor also restores the selected finger when a marker is cleared; on Windows, Left/Right arrows select fingers 1–4.
+
+Settings are disabled while a practice run is active and available again after stopping.
+
 ## Configuration
 
 Schema version 1 stores stable chord IDs, display names, six complete string states, derived metadata, enabled flags, fractional minimum/maximum durations, and both practice display/audio settings. Missing required fields, unsupported versions, invalid settings/fingerings, duplicate IDs, and chord metadata inconsistent with the fingering are rejected before import can replace local configuration. Writes use a temporary file followed by replacement. Local settings live in the platform app-data directory; import uses MAUI file picking and export uses the native MAUI save UI.

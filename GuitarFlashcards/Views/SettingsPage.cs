@@ -48,6 +48,7 @@ public sealed class SettingsPage : ContentPage
         VerticalTextAlignment = TextAlignment.Center
     };
     private bool _snappingStrumSlider;
+    private double _selectedDiagramScrollY;
     private readonly Switch _showFingering = new();
     private readonly Switch _playDuringRun = new();
     private readonly Label _validationMessage = new() { TextColor = Color.FromArgb("#A33D32") };
@@ -442,15 +443,20 @@ public sealed class SettingsPage : ContentPage
 
     private void RefreshSelectedChord()
     {
+        if (_selectedChordDiagram.Content is FingeringDiagramView previousDiagram)
+        {
+            _selectedDiagramScrollY = previousDiagram.CurrentScrollY;
+        }
+
         if (_viewModel.SelectedChord is not ChordDefinition chord)
         {
             _selectedChordName.Text = "Fingering preview · select a chord";
-            _selectedChordDiagram.Content = new FingeringDiagramView(GuitarFingering.Open(), 1, false);
+            _selectedChordDiagram.Content = new FingeringDiagramView(GuitarFingering.Open(), 1, false, initialScrollY: _selectedDiagramScrollY);
             return;
         }
 
         _selectedChordName.Text = $"{chord.DisplayName} · {ChordNoteEngine.IdentifyFingering(chord.Fingering, InstrumentTuning.StandardGuitar).DisplayText}";
-        _selectedChordDiagram.Content = new FingeringDiagramView(chord.Fingering, 1, false);
+        _selectedChordDiagram.Content = new FingeringDiagramView(chord.Fingering, 1, false, initialScrollY: _selectedDiagramScrollY);
         _selectedChordPanel.IsVisible = true;
     }
 

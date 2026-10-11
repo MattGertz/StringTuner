@@ -10,7 +10,7 @@
                 <Label Text="Guitar Flashcards" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource Ink}" />
                 <Label Text="PRACTICE" FontSize="10" CharacterSpacing="1.2" TextColor="{StaticResource Accent}" />
             </VerticalStackLayout>
-            <Button Grid.Column="1" Text="Settings &amp; Chords" Clicked="OnSettingsClicked" VerticalOptions="Center"
+            <Button Grid.Column="1" Text="Settings &amp; Chords" IsEnabled="{Binding CanOpenSettings}" Clicked="OnSettingsClicked" VerticalOptions="Center"
                     BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold"
                     Padding="12,9" CornerRadius="4" />
         </Grid>

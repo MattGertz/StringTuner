@@ -96,6 +96,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
                 OnPropertyChanged(nameof(StartButtonText));
                 OnPropertyChanged(nameof(CanStartPractice));
                 OnPropertyChanged(nameof(CanShowNoChordsMessage));
+                OnPropertyChanged(nameof(CanOpenSettings));
             }
         }
     }
@@ -139,6 +140,8 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
     public bool HasEnabledChords => Configuration.Chords.Any(chord => chord.Enabled);
 
     public bool CanStartPractice => IsRunning || HasEnabledChords;
+
+    public bool CanOpenSettings => !IsRunning;
 
     public bool CanShowNoChordsMessage => !HasEnabledChords && !IsRunning;
 

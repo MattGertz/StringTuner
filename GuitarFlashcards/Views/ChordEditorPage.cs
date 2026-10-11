@@ -24,6 +24,7 @@ public sealed class ChordEditorPage : ContentPage
     private readonly ContentView _diagramHost = new();
     private readonly Label _identification = new() { TextColor = Color.FromArgb("#65716D"), HorizontalTextAlignment = TextAlignment.Center };
     private readonly List<Button> _fingerButtons = [];
+    private double _diagramScrollY;
     private GuitarFingering _draft = GuitarFingering.Open();
     private Guid? _editingId;
     private int _selectedFinger = 1;
@@ -48,6 +49,8 @@ public sealed class ChordEditorPage : ContentPage
         _editingId = null;
         _selectedFinger = 1;
         _draft = GuitarFingering.Open();
+        _diagramScrollY = 0;
+        _diagramHost.Content = null;
         _displayNameManuallyOverridden = false;
         SetDisplayName(string.Empty);
         UpdateFingerButtonStyles();
@@ -58,6 +61,8 @@ public sealed class ChordEditorPage : ContentPage
     {
         _editingId = chord.Id;
         _draft = chord.Fingering;
+        _diagramScrollY = 0;
+        _diagramHost.Content = null;
         _displayNameManuallyOverridden = true;
         SetDisplayName(chord.DisplayName);
         RefreshDiagram();
@@ -183,6 +188,11 @@ public sealed class ChordEditorPage : ContentPage
 
     private void RefreshDiagram()
     {
+        if (_diagramHost.Content is FingeringDiagramView previousDiagram)
+        {
+            _diagramScrollY = previousDiagram.CurrentScrollY;
+        }
+
         _diagramHost.Content = new FingeringDiagramView(
             _draft,
             _selectedFinger,
@@ -202,7 +212,8 @@ public sealed class ChordEditorPage : ContentPage
             {
                 _draft = FingeringEditor.SetStringState(_draft, stringIndex, state);
                 RefreshDiagram();
-            });
+            },
+            initialScrollY: _diagramScrollY);
 
         var result = ChordNoteEngine.IdentifyFingering(_draft, InstrumentTuning.StandardGuitar);
         _identification.Text = result.DisplayText;
