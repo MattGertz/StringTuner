@@ -4,6 +4,33 @@ namespace GuitarFlashcards.Core.Tests;
 
 public sealed class ChordNoteEngineTests
 {
+    public static TheoryData<string, int[]> SupportedChordQualities => new()
+    {
+        { "C", [0, 4, 7] },
+        { "Cm", [0, 3, 7] },
+        { "Cdim", [0, 3, 6] },
+        { "Caug", [0, 4, 8] },
+        { "C7", [0, 4, 7, 10] },
+        { "Cm7", [0, 3, 7, 10] },
+        { "Cø7", [0, 3, 6, 10] },
+        { "C°7", [0, 3, 6, 9] },
+        { "Cmaj7", [0, 4, 7, 11] },
+        { "Csus2", [0, 2, 7] },
+        { "Csus4", [0, 5, 7] },
+        { "C6", [0, 4, 7, 9] },
+        { "Cm6", [0, 3, 7, 9] },
+        { "C9", [0, 2, 4, 7, 10] },
+        { "Cm9", [0, 2, 3, 7, 10] },
+        { "Cmaj9", [0, 2, 4, 7, 11] },
+        { "C11", [0, 2, 4, 5, 7, 10] },
+        { "Cm11", [0, 2, 3, 5, 7, 10] },
+        { "Cmaj11", [0, 2, 4, 5, 7, 11] },
+        { "C13", [0, 2, 4, 5, 7, 9, 10] },
+        { "Cm13", [0, 2, 3, 5, 7, 9, 10] },
+        { "Cmaj13", [0, 2, 4, 5, 7, 9, 11] },
+        { "C5", [0, 7] }
+    };
+
     [Fact]
     public void EditorSupportsOpenMutedFrettedReplacementAndClear()
     {
@@ -50,6 +77,48 @@ public sealed class ChordNoteEngineTests
         var result = ChordNoteEngine.Identify([0, 4, 7], bassPitchClass: 4);
 
         Assert.Equal("C/E", result.Name);
+    }
+
+    [Theory]
+    [MemberData(nameof(SupportedChordQualities))]
+    public void IdentifiesEveryBookChordQuality(string expected, int[] intervals)
+    {
+        Assert.Equal(expected, ChordNoteEngine.Identify(intervals, bassPitchClass: 0).Name);
+    }
+
+    [Theory]
+    [InlineData(new[] { 0, 2, 4, 10 }, "C9")]
+    [InlineData(new[] { 0, 2, 5, 10 }, "C11")]
+    [InlineData(new[] { 0, 4, 9, 10 }, "C13")]
+    [InlineData(new[] { 0, 4, 9, 11 }, "Cmaj13")]
+    public void IdentifiesExtendedChordsWithPracticalOmittedTones(int[] notes, string expected)
+    {
+        Assert.Equal(expected, ChordNoteEngine.Identify(notes, bassPitchClass: 0).Name);
+    }
+
+    [Fact]
+    public void UsesBassAndDefiningTonesToRankC6AndAm7PitchCollection()
+    {
+        var notes = new[] { 0, 4, 7, 9 };
+
+        Assert.Equal("C6", ChordNoteEngine.Identify(notes, bassPitchClass: 0).Name);
+        Assert.Equal("Am7", ChordNoteEngine.Identify(notes, bassPitchClass: 9).Name);
+    }
+
+    [Fact]
+    public void PrefersShorterChordSymbolForEquallySupportedA6AndMinorSeventh()
+    {
+        var result = ChordNoteEngine.Identify([4, 9, 1, 6], bassPitchClass: 4);
+
+        Assert.Equal("A6/E", result.Name);
+        Assert.Equal("F#m7/E", Assert.Single(result.Alternatives));
+        Assert.Equal("Identified as A6/E; also known as F#m7/E", result.DisplayText);
+    }
+
+    [Fact]
+    public void NormalizesEnharmonicPitchNumbersBeforeIdentification()
+    {
+        Assert.Equal("C", ChordNoteEngine.Identify([12, 16, 19], bassPitchClass: 12).Name);
     }
 
     [Fact]
@@ -101,7 +170,7 @@ public sealed class ChordNoteEngineTests
     public void DoesNotInventANameForSingleOrUnmatchedPitchSets()
     {
         Assert.Null(ChordNoteEngine.Identify([0]).Name);
-        Assert.Null(ChordNoteEngine.Identify([0, 1, 6]).Name);
+        Assert.Null(ChordNoteEngine.Identify([0, 1, 2]).Name);
     }
 
     [Fact]
@@ -110,7 +179,7 @@ public sealed class ChordNoteEngineTests
         var result = ChordNoteEngine.Identify([0, 4, 8]);
 
         Assert.True(result.IsAmbiguous);
-        Assert.Null(result.Name);
+        Assert.Equal("Caug", result.Name);
         Assert.Contains("Caug", result.Candidates);
         Assert.Contains("Eaug", result.Candidates);
         Assert.Contains("G#aug", result.Candidates);

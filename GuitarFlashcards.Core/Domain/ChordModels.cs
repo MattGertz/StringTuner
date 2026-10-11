@@ -90,4 +90,14 @@ public sealed record ChordIdentificationResult(string? Name, IReadOnlyList<strin
     public bool IsIdentified => Name is not null;
 
     public bool IsAmbiguous => Candidates.Count > 1;
+
+    public IReadOnlyList<string> Alternatives => Name is null
+        ? Candidates
+        : Candidates.Where(candidate => !string.Equals(candidate, Name, StringComparison.Ordinal)).ToArray();
+
+    public string DisplayText => Name is null
+        ? "Chord not identified"
+        : Alternatives.Count == 0
+            ? $"Identified as {Name}"
+            : $"Identified as {Name}; also known as {string.Join(", ", Alternatives)}";
 }

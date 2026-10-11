@@ -1,6 +1,11 @@
 using System.Globalization;
 using GuitarFlashcards.Core.Domain;
 using GuitarFlashcards.ViewModels;
+#if WINDOWS
+using Windows.System;
+using WinUIKeyEventArgs = Microsoft.UI.Xaml.Input.KeyRoutedEventArgs;
+using WinUIElement = Microsoft.UI.Xaml.UIElement;
+#endif
 
 namespace GuitarFlashcards.Views;
 
@@ -24,6 +29,9 @@ public sealed class ChordEditorPage : ContentPage
     private int _selectedFinger = 1;
     private bool _displayNameManuallyOverridden;
     private bool _settingNameProgrammatically;
+#if WINDOWS
+    private WinUIElement? _keyboardEventTarget;
+#endif
 
     public ChordEditorPage(FlashcardsViewModel viewModel)
     {
@@ -53,6 +61,23 @@ public sealed class ChordEditorPage : ContentPage
         _displayNameManuallyOverridden = true;
         SetDisplayName(chord.DisplayName);
         RefreshDiagram();
+    }
+
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+#if WINDOWS
+        if (_keyboardEventTarget is not null)
+        {
+            _keyboardEventTarget.KeyDown -= OnWindowsKeyDown;
+        }
+
+        _keyboardEventTarget = Handler?.PlatformView as WinUIElement;
+        if (_keyboardEventTarget is not null)
+        {
+            _keyboardEventTarget.KeyDown += OnWindowsKeyDown;
+        }
+#endif
     }
 
     private void BuildContent()
@@ -117,9 +142,25 @@ public sealed class ChordEditorPage : ContentPage
 
     private void SetSelectedFinger(int finger)
     {
-        _selectedFinger = finger;
+        _selectedFinger = Math.Clamp(finger, 1, 4);
         UpdateFingerButtonStyles();
     }
+
+#if WINDOWS
+    private void OnWindowsKeyDown(object sender, WinUIKeyEventArgs eventArgs)
+    {
+        if (eventArgs.Key == VirtualKey.Left)
+        {
+            SetSelectedFinger(_selectedFinger - 1);
+            eventArgs.Handled = true;
+        }
+        else if (eventArgs.Key == VirtualKey.Right)
+        {
+            SetSelectedFinger(_selectedFinger + 1);
+            eventArgs.Handled = true;
+        }
+    }
+#endif
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs eventArgs)
     {
@@ -148,6 +189,12 @@ public sealed class ChordEditorPage : ContentPage
             true,
             (stringIndex, fret) =>
             {
+                var current = _draft.Strings[stringIndex];
+                if (current.State == StringNoteState.Fretted && current.Fret == fret && current.Finger is int existingFinger)
+                {
+                    SetSelectedFinger(existingFinger);
+                }
+
                 _draft = FingeringEditor.SetFrettedPosition(_draft, stringIndex, fret, _selectedFinger);
                 RefreshDiagram();
             },
@@ -157,12 +204,8 @@ public sealed class ChordEditorPage : ContentPage
                 RefreshDiagram();
             });
 
-        var notes = ChordNoteEngine.DeriveNotes(_draft, InstrumentTuning.StandardGuitar);
-        var bass = notes.MinBy(note => note.MidiNote)?.PitchClass;
-        var result = ChordNoteEngine.Identify(notes.Select(note => note.PitchClass).ToArray(), bass);
-        _identification.Text = result.Name is not null
-            ? $"Identified as {result.Name}"
-            : result.Candidates.Count > 0 ? $"Ambiguous: {string.Join(" / ", result.Candidates)}" : "Chord not identified";
+        var result = ChordNoteEngine.IdentifyFingering(_draft, InstrumentTuning.StandardGuitar);
+        _identification.Text = result.DisplayText;
         if (!_displayNameManuallyOverridden)
         {
             SetDisplayName(result.Name ?? string.Empty);

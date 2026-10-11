@@ -166,6 +166,21 @@ public sealed class FingeringDiagramView : ContentView
             }, 0, fret + 1);
         }
 
+        var inferredBarres = BarreInference.Infer(_fingering);
+        if (inferredBarres.Count > 0)
+        {
+            var barreOverlay = new GraphicsView
+            {
+                Drawable = new BarreOverlayDrawable(inferredBarres),
+                InputTransparent = true,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill
+            };
+            grid.Add(barreOverlay, 0, 0);
+            Grid.SetColumnSpan(barreOverlay, grid.ColumnDefinitions.Count);
+            Grid.SetRowSpan(barreOverlay, grid.RowDefinitions.Count);
+        }
+
         return new Border
         {
             Stroke = Rule,
@@ -194,4 +209,33 @@ public sealed class FingeringDiagramView : ContentView
         IsEnabled = _interactive,
         Command = new Command(tapped)
     };
+
+    private sealed class BarreOverlayDrawable(IReadOnlyList<BarreSegment> segments) : IDrawable
+    {
+        public void Draw(ICanvas canvas, RectF dirtyRect)
+        {
+            const float stringLabelWidth = 32;
+            const float noteLabelHeight = 27;
+            const float openMutedRowHeight = 35;
+            const float fretRowHeight = 34;
+            const float markerRadius = 13.5f;
+            var stringWidth = (dirtyRect.Width - stringLabelWidth) / 6;
+            canvas.StrokeColor = Color.FromArgb("#0E514D");
+            canvas.StrokeSize = 4;
+            canvas.StrokeLineCap = LineCap.Round;
+
+            foreach (var segment in segments)
+            {
+                var leftCenter = stringLabelWidth + (segment.StartStringIndex + 0.5f) * stringWidth;
+                var rightCenter = stringLabelWidth + (segment.EndStringIndex + 0.5f) * stringWidth;
+                var y = noteLabelHeight + openMutedRowHeight + (segment.Fret - 0.5f) * fretRowHeight;
+                var start = leftCenter + markerRadius;
+                var end = rightCenter - markerRadius;
+                if (end > start)
+                {
+                    canvas.DrawLine(start, y, end, y);
+                }
+            }
+        }
+    }
 }

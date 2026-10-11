@@ -6,9 +6,11 @@ An independent .NET MAUI chord practice app for Windows and Android. The tuner d
 
 The six strings are ordered low E to high E in standard tuning. Each string is open, muted, or fretted; fingering notes are derived from MIDI note numbers before identification. The identifier compares the actual pitch-class set against chord interval definitions, not named guitar shapes.
 
-Supported qualities include major, minor, diminished, augmented, suspended, power, sixth, seventh, ninth, and selected minor/major variants. It examines all twelve roots, accepts common incomplete voicings and supported rootless voicings, and uses the lowest sounding note to name inversions. Candidate ranking is deterministic: complete matches first, then a present root, a bass note matching the candidate root, fewer missing tones, and the quality preference table. Equally ranked interpretations are displayed as ambiguous rather than arbitrarily chosen. Names use sharp pitch-class spelling (`C#`, `D#`, etc.); slash bass notation marks inversions.
+The quality table covers all 23 requested forms: major, minor, diminished, augmented, dominant/minor/half-diminished/fully diminished/major sevenths, sus2/sus4, major/minor sixths, dominant/minor/major ninths, elevenths, and thirteenths, plus power chords and the existing add-tone forms. Half-diminished uses `ø7`; fully diminished uses `°7`. The engine checks all twelve roots and accepts practical incomplete/rootless voicings only when defining seventh/extension tones provide evidence. Candidate ranking prioritizes bass-root agreement, a present root, defining-tone evidence, and fewer omitted tones, then prefers the least-qualified compatible symbol and the shortest conventional spelling. A primary name is returned consistently; equally ranked alternatives are retained and shown as “also known as” in the editor, library, and practice display. Names use sharp pitch-class spelling (`C#`, `D#`, etc.); slash bass notation marks inversions.
 
 The fully open standard guitar yields pitch classes E, G, B, D, and A. The identifier names this as `Em7(add11)` rather than leaving the five-note set unidentified.
+
+`BarreInference` spans from the first to the last string sharing a finger number and fret, even when intervening strings have another assignment. The fingering diagram draws the connector between the matching finger markers. This is a visual heuristic only; it does not add barre objects or affect note derivation/chord naming.
 
 ## Configuration
 

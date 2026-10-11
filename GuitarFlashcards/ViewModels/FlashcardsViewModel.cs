@@ -146,9 +146,9 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
 
     public string PracticeChordName => PracticeChord?.DisplayName ?? (HasEnabledChords ? "Ready" : "No enabled chords");
 
-    public string PracticeDerivedName => PracticeChord?.DerivedChordName is string name
-        ? $"Identified as {name}"
-        : PracticeChord is null ? string.Empty : "Chord not identified";
+    public string PracticeDerivedName => PracticeChord is ChordDefinition chord
+        ? ChordNoteEngine.IdentifyFingering(chord.Fingering, InstrumentTuning.StandardGuitar).DisplayText
+        : string.Empty;
 
     public GuitarFingering PracticeFingering => PracticeChord?.Fingering ?? GuitarFingering.Open();
 

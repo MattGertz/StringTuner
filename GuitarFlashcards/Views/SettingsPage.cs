@@ -375,9 +375,10 @@ public sealed class SettingsPage : ContentPage
         {
             var duplicateName = _viewModel.Chords.Count(item => string.Equals(item.DisplayName, chord.DisplayName, StringComparison.OrdinalIgnoreCase)) > 1;
             var displayName = duplicateName ? $"{chord.DisplayName}  ({chord.Id.ToString("N")[..6]})" : chord.DisplayName;
+            var identification = ChordNoteEngine.IdentifyFingering(chord.Fingering, InstrumentTuning.StandardGuitar);
             var nameButton = new Button
             {
-                Text = chord.DerivedChordName is null ? displayName : $"{displayName}\n{chord.DerivedChordName}",
+                Text = $"{displayName}\n{identification.DisplayText}",
                 HorizontalOptions = LayoutOptions.Fill,
                 BackgroundColor = _viewModel.SelectedChord?.Id == chord.Id ? Color.FromArgb("#D7E5E1") : Color.FromArgb("#F4F3ED"),
                 BorderColor = _viewModel.SelectedChord?.Id == chord.Id ? Color.FromArgb("#146C67") : Color.FromArgb("#CFD5D0"),
@@ -448,9 +449,7 @@ public sealed class SettingsPage : ContentPage
             return;
         }
 
-        _selectedChordName.Text = chord.DerivedChordName is null
-            ? chord.DisplayName
-            : $"{chord.DisplayName}  ·  {chord.DerivedChordName}";
+        _selectedChordName.Text = $"{chord.DisplayName} · {ChordNoteEngine.IdentifyFingering(chord.Fingering, InstrumentTuning.StandardGuitar).DisplayText}";
         _selectedChordDiagram.Content = new FingeringDiagramView(chord.Fingering, 1, false);
         _selectedChordPanel.IsVisible = true;
     }
