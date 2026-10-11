@@ -31,6 +31,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
     {
         _store = store;
         _audioPlayer = audioPlayer;
+        _audioPlayer.PlaybackStateChanged += OnAudioPlaybackStateChanged;
         Chords = [];
     }
 
@@ -75,6 +76,16 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
 
     public bool IsAudioPlaying => _audioPlayer.IsPlaying;
 
+    private void OnAudioPlaybackStateChanged(object? sender, EventArgs eventArgs)
+    {
+        if (!_audioPlayer.IsPlaying)
+        {
+            PlayingChordId = null;
+        }
+
+        OnPropertyChanged(nameof(IsAudioPlaying));
+    }
+
     public bool IsRunning
     {
         get => _isRunning;
@@ -118,6 +129,8 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         get => _maximumDurationText;
         set => SetProperty(ref _maximumDurationText, value);
     }
+
+    public double StrumIntervalSeconds => Settings.StrumIntervalSeconds;
 
     public bool ShowFingering => Settings.ShowFingering;
 
@@ -240,6 +253,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         string maximumText,
         bool showFingering,
         bool playChordDuringRun,
+        double strumIntervalSeconds,
         CancellationToken cancellationToken = default)
     {
         if (!double.TryParse(minimumText, NumberStyles.Float, CultureInfo.InvariantCulture, out var minimum)
@@ -248,7 +262,10 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
             return "Enter valid numeric durations using a period for the decimal separator.";
         }
 
-        var settings = new PracticeSettings(minimum, maximum, showFingering, playChordDuringRun);
+        var settings = new PracticeSettings(minimum, maximum, showFingering, playChordDuringRun)
+        {
+            StrumIntervalSeconds = strumIntervalSeconds
+        };
         var candidate = Configuration with { Settings = settings };
         try
         {
@@ -266,6 +283,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
             MinimumDurationText = minimum.ToString("0.###", CultureInfo.InvariantCulture);
             MaximumDurationText = maximum.ToString("0.###", CultureInfo.InvariantCulture);
             OnPropertyChanged(nameof(Settings));
+            OnPropertyChanged(nameof(StrumIntervalSeconds));
             OnPropertyChanged(nameof(ShowFingering));
             OnPropertyChanged(nameof(PlayChordDuringRun));
             OnPropertyChanged(nameof(ShowPracticeFingering));
@@ -301,7 +319,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
 
     public async Task PlayChordAsync(GuitarFingering fingering, CancellationToken cancellationToken = default)
     {
-        await _audioPlayer.PlayAsync(fingering, cancellationToken);
+        await _audioPlayer.PlayAsync(fingering, Settings.StrumIntervalSeconds, cancellationToken);
         PlayingChordId = null;
         OnPropertyChanged(nameof(IsAudioPlaying));
     }
@@ -315,7 +333,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         }
         else
         {
-            await _audioPlayer.PlayAsync(fingering, cancellationToken);
+            await _audioPlayer.PlayAsync(fingering, Settings.StrumIntervalSeconds, cancellationToken);
             PlayingChordId = chordId;
         }
 
@@ -366,7 +384,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
                     StatusText = chord.DerivedChordName ?? "Chord displayed";
                     if (Configuration.Settings.PlayChordDuringRun)
                     {
-                        await _audioPlayer.PlayAsync(chord.Fingering, cancellationToken);
+                        await _audioPlayer.PlayAsync(chord.Fingering, Settings.StrumIntervalSeconds, cancellationToken);
                         PlayingChordId = chord.Id;
                     }
                     else
@@ -426,6 +444,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         Configuration = configuration;
         RefreshChords();
         OnPropertyChanged(nameof(Settings));
+        OnPropertyChanged(nameof(StrumIntervalSeconds));
         OnPropertyChanged(nameof(ShowFingering));
         OnPropertyChanged(nameof(PlayChordDuringRun));
         OnPropertyChanged(nameof(HasEnabledChords));

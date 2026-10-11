@@ -8,13 +8,15 @@ The six strings are ordered low E to high E in standard tuning. Each string is o
 
 Supported qualities include major, minor, diminished, augmented, suspended, power, sixth, seventh, ninth, and selected minor/major variants. It examines all twelve roots, accepts common incomplete voicings and supported rootless voicings, and uses the lowest sounding note to name inversions. Candidate ranking is deterministic: complete matches first, then a present root, a bass note matching the candidate root, fewer missing tones, and the quality preference table. Equally ranked interpretations are displayed as ambiguous rather than arbitrarily chosen. Names use sharp pitch-class spelling (`C#`, `D#`, etc.); slash bass notation marks inversions.
 
+The fully open standard guitar yields pitch classes E, G, B, D, and A. The identifier names this as `Em7(add11)` rather than leaving the five-note set unidentified.
+
 ## Configuration
 
 Schema version 1 stores stable chord IDs, display names, six complete string states, derived metadata, enabled flags, fractional minimum/maximum durations, and both practice display/audio settings. Missing required fields, unsupported versions, invalid settings/fingerings, duplicate IDs, and chord metadata inconsistent with the fingering are rejected before import can replace local configuration. Writes use a temporary file followed by replacement. Local settings live in the platform app-data directory; import uses MAUI file picking and export uses the native MAUI save UI.
 
 ## Audio
 
-Chord playback keeps the tuner's established timbre: each note contains its fundamental plus second, third, and fourth harmonics at relative levels `1.0`, `0.28`, `0.12`, and `0.05`. Notes are mixed as mono 44.1 kHz PCM and normalized for the number of simultaneous strings. There is no per-loop fade, avoiding a repeating volume dip; player start/stop volume ramps reduce clicks when playback is explicitly started or stopped. Synthesis is platform-independent; `Plugin.Maui.Audio` supplies playback on the MAUI targets.
+`ChordWaveformSynthesizer` independently excites a Karplus–Strong delay line for every sounding string and mixes mono PCM. Low E begins first and high E last across a configurable 25 ms strum. Each string also gets a deterministic, high-passed 2.5 ms noise pick transient. Delay-line averaging naturally damps upper partials rapidly while feedback controls each string's decay, avoiding the fixed, phase-coherent additive chord that sounded organ-like. The tuner reference still uses its original fundamental plus restrained second through fourth harmonics; that balance is intentionally not imposed on the guitar-string sustain. The persisted strum interval is adjustable from 0.25 to 4.0 seconds in quarter-second increments, defaulting to 1.0 second. Each string's decay approaches the retrigger threshold by the configured next-strum interval; a fresh independent low-to-high excitation is then injected. The resulting phrase loops for continuous Play/Pause; stop and cancellation fade the active player. Synthesis runs off the UI thread with bounded delay-line and output buffers. Windows/Android hardware playback still needs listening evaluation.
 
 ## Build and tests
 

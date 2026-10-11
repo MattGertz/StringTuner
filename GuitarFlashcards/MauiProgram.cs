@@ -1,6 +1,7 @@
 using Plugin.Maui.Audio;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Maui;
+using GuitarFlashcards.Core.Audio;
 using GuitarFlashcards.Services;
 using GuitarFlashcards.ViewModels;
 using GuitarFlashcards.Views;
@@ -23,6 +24,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<MainPage>();
         builder.Services.AddSingleton<LocalConfigurationStore>();
+        builder.Services.AddSingleton<ChordWaveformSynthesizer>();
         builder.Services.AddSingleton<FlashcardAudioPlayer>();
         builder.Services.AddSingleton<FlashcardsViewModel>();
         builder.Services.AddTransient<SettingsPage>();

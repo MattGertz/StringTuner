@@ -1,3 +1,4 @@
+using System.Globalization;
 using GuitarFlashcards.Core.Domain;
 using GuitarFlashcards.Services;
 using GuitarFlashcards.ViewModels;
@@ -29,14 +30,39 @@ public sealed class SettingsPage : ContentPage
         PlaceholderColor = Color.FromArgb("#65716D"),
         BackgroundColor = Colors.White
     };
+    private readonly Slider _strumInterval = new()
+    {
+        Minimum = 0.25,
+        Maximum = 4.0,
+        Value = 1.0,
+        MinimumTrackColor = Color.FromArgb("#146C67"),
+        MaximumTrackColor = Color.FromArgb("#AEBAB5"),
+        ThumbColor = Color.FromArgb("#146C67")
+    };
+    private readonly Label _strumIntervalValue = new()
+    {
+        Text = "1.00 s",
+        TextColor = Color.FromArgb("#202A27"),
+        FontAttributes = FontAttributes.Bold,
+        HorizontalTextAlignment = TextAlignment.End,
+        VerticalTextAlignment = TextAlignment.Center
+    };
+    private bool _snappingStrumSlider;
     private readonly Switch _showFingering = new();
     private readonly Switch _playDuringRun = new();
     private readonly Label _validationMessage = new() { TextColor = Color.FromArgb("#A33D32") };
+    private Button? _saveSettingsButton;
+    private PracticeSettings? _savedSettings;
+    private bool _loadingControls;
 
     public SettingsPage(FlashcardsViewModel viewModel, ChordEditorPage editorPage)
     {
         _viewModel = viewModel;
         _editorPage = editorPage;
+        _minimumDuration.TextChanged += OnSettingsEdited;
+        _maximumDuration.TextChanged += OnSettingsEdited;
+        _showFingering.Toggled += OnSettingsEdited;
+        _playDuringRun.Toggled += OnSettingsEdited;
         Title = "Settings and chord library";
         BackgroundColor = Color.FromArgb("#F4F3ED");
         BuildContent();
@@ -52,8 +78,9 @@ public sealed class SettingsPage : ContentPage
 
     private void BuildContent()
     {
-        var saveSettings = new Button { Text = "Save settings" };
-        saveSettings.Clicked += async (_, _) => await SaveSettingsAsync();
+        _strumInterval.ValueChanged += OnStrumIntervalChanged;
+        _saveSettingsButton = new Button { Text = "Save settings", IsEnabled = false };
+        _saveSettingsButton.Clicked += async (_, _) => await SaveSettingsAsync();
         var import = new Button { Text = "Import JSON" };
         import.Clicked += async (_, _) => await ImportAsync();
         var export = new Button { Text = "Export JSON" };
@@ -66,11 +93,11 @@ public sealed class SettingsPage : ContentPage
         };
         var close = new Button
         {
-            Text = "Cancel",
+            Text = "Close",
             BackgroundColor = Color.FromArgb("#146C67"),
             TextColor = Colors.White
         };
-        close.Clicked += async (_, _) => await CancelAsync();
+        close.Clicked += async (_, _) => await CloseAsync();
 
         var titleRow = new Grid
         {
@@ -104,9 +131,10 @@ public sealed class SettingsPage : ContentPage
             {
                 new Label { Text = "Practice settings", FontSize = 16, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#202A27") },
                 timingGrid,
+                BuildStrumIntervalControl(),
                 toggles,
                 _validationMessage,
-                new HorizontalStackLayout { Spacing = 6, Children = { import, export, saveSettings } }
+                new HorizontalStackLayout { Spacing = 6, Children = { import, export, _saveSettingsButton } }
             }
         };
 
@@ -157,13 +185,103 @@ public sealed class SettingsPage : ContentPage
         return row;
     }
 
+    private View BuildStrumIntervalControl()
+    {
+        var heading = new Grid
+        {
+            ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) }
+        };
+        heading.Add(new Label
+        {
+            Text = "Strum interval",
+            FontSize = 12,
+            TextColor = Color.FromArgb("#202A27"),
+            VerticalOptions = LayoutOptions.Center
+        }, 0);
+        heading.Add(_strumIntervalValue, 1);
+
+        var tickGrid = new Grid { ColumnSpacing = 0, HeightRequest = 5 };
+        for (var tick = 0; tick <= 15; tick++)
+        {
+            tickGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            tickGrid.Add(new BoxView
+            {
+                WidthRequest = 1,
+                HeightRequest = tick % 4 == 0 ? 5 : 3,
+                Color = Color.FromArgb("#65716D"),
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Start
+            }, tick);
+        }
+
+        return new VerticalStackLayout
+        {
+            Spacing = 0,
+            Children = { heading, _strumInterval, tickGrid }
+        };
+    }
+
+    private void OnStrumIntervalChanged(object? sender, ValueChangedEventArgs eventArgs)
+    {
+        if (_snappingStrumSlider)
+        {
+            return;
+        }
+
+        var snapped = Math.Clamp(Math.Round(eventArgs.NewValue * 4, MidpointRounding.AwayFromZero) / 4, 0.25, 4.0);
+        if (Math.Abs(snapped - eventArgs.NewValue) > 0.0001)
+        {
+            _snappingStrumSlider = true;
+            _strumInterval.Value = snapped;
+            _snappingStrumSlider = false;
+        }
+
+        _strumIntervalValue.Text = $"{snapped:0.00} s";
+        UpdateSaveSettingsState();
+    }
+
     private void LoadControls()
     {
+        _loadingControls = true;
         _minimumDuration.Text = _viewModel.MinimumDurationText;
         _maximumDuration.Text = _viewModel.MaximumDurationText;
+        _strumInterval.Value = _viewModel.StrumIntervalSeconds;
+        _strumIntervalValue.Text = $"{_viewModel.StrumIntervalSeconds:0.00} s";
         _showFingering.IsToggled = _viewModel.ShowFingering;
         _playDuringRun.IsToggled = _viewModel.PlayChordDuringRun;
         _validationMessage.Text = string.Empty;
+        _savedSettings = _viewModel.Settings;
+        _loadingControls = false;
+        UpdateSaveSettingsState();
+    }
+
+    private void OnSettingsEdited(object? sender, EventArgs eventArgs) => UpdateSaveSettingsState();
+
+    private bool HasUnsavedSettings
+    {
+        get
+        {
+            if (_savedSettings is null
+                || !double.TryParse(_minimumDuration.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var minimum)
+                || !double.TryParse(_maximumDuration.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var maximum))
+            {
+                return true;
+            }
+
+            return minimum != _savedSettings.MinimumDurationSeconds
+                || maximum != _savedSettings.MaximumDurationSeconds
+                || _showFingering.IsToggled != _savedSettings.ShowFingering
+                || _playDuringRun.IsToggled != _savedSettings.PlayChordDuringRun
+                || Math.Abs(_strumInterval.Value - _savedSettings.StrumIntervalSeconds) > 0.0001;
+        }
+    }
+
+    private void UpdateSaveSettingsState()
+    {
+        if (!_loadingControls && _saveSettingsButton is not null)
+        {
+            _saveSettingsButton.IsEnabled = HasUnsavedSettings;
+        }
     }
 
     private async Task SaveSettingsAsync()
@@ -172,18 +290,38 @@ public sealed class SettingsPage : ContentPage
             _minimumDuration.Text ?? string.Empty,
             _maximumDuration.Text ?? string.Empty,
             _showFingering.IsToggled,
-            _playDuringRun.IsToggled);
+            _playDuringRun.IsToggled,
+            _strumInterval.Value);
         _validationMessage.Text = error ?? string.Empty;
         if (error is null)
         {
+            _savedSettings = _viewModel.Settings;
             await Navigation.PopModalAsync();
         }
     }
 
-    private async Task CancelAsync()
+    private async Task CloseAsync()
     {
-        LoadControls();
-        await Navigation.PopModalAsync();
+        if (!HasUnsavedSettings)
+        {
+            await Navigation.PopModalAsync();
+            return;
+        }
+
+        var action = await DisplayActionSheetAsync(
+            "Unsaved practice settings",
+            "Stay",
+            "Discard",
+            "Save");
+        if (action == "Save")
+        {
+            await SaveSettingsAsync();
+        }
+        else if (action == "Discard")
+        {
+            LoadControls();
+            await Navigation.PopModalAsync();
+        }
     }
 
     private async Task ImportAsync()

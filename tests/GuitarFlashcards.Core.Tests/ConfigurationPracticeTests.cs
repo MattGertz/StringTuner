@@ -26,7 +26,7 @@ public sealed class ConfigurationPracticeTests
     public void ConfigurationRoundTripPreservesChordAndFractionalSettings()
     {
         var chord = new ChordLibrary().Add("Open E", GuitarFingering.Open());
-        var settings = new PracticeSettings(1.25, 3.75, false, false);
+        var settings = new PracticeSettings(1.25, 3.75, false, false) { StrumIntervalSeconds = 1.75 };
         var original = new AppConfiguration(1, [chord], settings);
 
         var restored = ConfigurationJson.Deserialize(ConfigurationJson.Serialize(original));
@@ -51,6 +51,34 @@ public sealed class ConfigurationPracticeTests
         Assert.Throws<ArgumentException>(() => ConfigurationJson.Validate(configuration));
     }
 
+    [Theory]
+    [InlineData(0.25)]
+    [InlineData(1.0)]
+    [InlineData(4.0)]
+    public void ConfigurationAcceptsBoundaryStrumIntervals(double interval)
+    {
+        var configuration = AppConfiguration.Default with
+        {
+            Settings = new PracticeSettings { StrumIntervalSeconds = interval }
+        };
+
+        ConfigurationJson.Validate(configuration);
+    }
+
+    [Theory]
+    [InlineData(0.249)]
+    [InlineData(4.001)]
+    [InlineData(double.NaN)]
+    public void ConfigurationRejectsOutOfRangeStrumIntervals(double interval)
+    {
+        var configuration = AppConfiguration.Default with
+        {
+            Settings = new PracticeSettings { StrumIntervalSeconds = interval }
+        };
+
+        Assert.Throws<ArgumentException>(() => ConfigurationJson.Validate(configuration));
+    }
+
     [Fact]
     public void ConfigurationRejectsDuplicateIdsAndInconsistentDerivedMetadata()
     {
@@ -66,6 +94,8 @@ public sealed class ConfigurationPracticeTests
     public void ConfigurationRejectsMissingRequiredJsonFieldsAndUnsupportedVersions()
     {
         Assert.Throws<System.Text.Json.JsonException>(() => ConfigurationJson.Deserialize("{\"schemaVersion\":1,\"chords\":[],\"settings\":{\"minimumDurationSeconds\":2,\"maximumDurationSeconds\":4}}"));
+        var legacy = ConfigurationJson.Deserialize("{\"schemaVersion\":1,\"chords\":[],\"settings\":{\"minimumDurationSeconds\":2,\"maximumDurationSeconds\":4,\"showFingering\":true,\"playChordDuringRun\":true}}");
+        Assert.Equal(1.0, legacy.Settings.StrumIntervalSeconds);
         Assert.Throws<ArgumentException>(() => ConfigurationJson.Validate(AppConfiguration.Default with { SchemaVersion = 2 }));
     }
 

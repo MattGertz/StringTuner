@@ -89,6 +89,15 @@ public sealed class ChordNoteEngineTests
     }
 
     [Fact]
+    public void IdentifiesAllOpenStandardStringsAsEm7Add11()
+    {
+        var notes = ChordNoteEngine.DeriveNotes(GuitarFingering.Open(), InstrumentTuning.StandardGuitar);
+        var bass = notes.MinBy(note => note.MidiNote)?.PitchClass;
+
+        Assert.Equal("Em7(add11)", ChordNoteEngine.Identify(notes.Select(note => note.PitchClass).ToArray(), bass).Name);
+    }
+
+    [Fact]
     public void DoesNotInventANameForSingleOrUnmatchedPitchSets()
     {
         Assert.Null(ChordNoteEngine.Identify([0]).Name);

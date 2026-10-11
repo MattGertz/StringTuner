@@ -7,7 +7,10 @@ public sealed record PracticeSettings(
     [property: JsonRequired] double MinimumDurationSeconds = 2,
     [property: JsonRequired] double MaximumDurationSeconds = 4,
     [property: JsonRequired] bool ShowFingering = true,
-    [property: JsonRequired] bool PlayChordDuringRun = true);
+    [property: JsonRequired] bool PlayChordDuringRun = true)
+{
+    public double StrumIntervalSeconds { get; init; } = 1.0;
+}
 
 public sealed record AppConfiguration(
     [property: JsonRequired] int SchemaVersion,
@@ -57,6 +60,12 @@ public static class ConfigurationJson
             || configuration.Settings.MaximumDurationSeconds <= configuration.Settings.MinimumDurationSeconds)
         {
             throw new ArgumentException("Minimum duration must be greater than zero and maximum duration must be greater than minimum duration.");
+        }
+
+        if (!double.IsFinite(configuration.Settings.StrumIntervalSeconds)
+            || configuration.Settings.StrumIntervalSeconds is < 0.25 or > 4.0)
+        {
+            throw new ArgumentException("Strum interval must be between 0.25 and 4.0 seconds.");
         }
 
         var ids = new HashSet<Guid>();
