@@ -30,9 +30,17 @@ public sealed record AppConfiguration(
     public static AppConfiguration Default { get; } = new(1, [], new PracticeSettings());
 }
 
+public sealed record PracticeSettingsDocument(
+    [property: JsonRequired] int SchemaVersion,
+    [property: JsonRequired] PracticeSettings Settings);
+
+public sealed record ChordLibraryDocument(
+    [property: JsonRequired] int SchemaVersion,
+    [property: JsonRequired] IReadOnlyList<ChordDefinition> Chords);
+
 public static class ConfigurationJson
 {
-    private static readonly JsonSerializerOptions Options = new()
+    internal static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
@@ -105,5 +113,53 @@ public static class ConfigurationJson
                 throw new ArgumentException($"Derived chord metadata is inconsistent for '{chord.DisplayName}'.");
             }
         }
+    }
+}
+
+public static class PracticeSettingsJson
+{
+    public static string Serialize(PracticeSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ConfigurationJson.Validate(AppConfiguration.Default with { Settings = settings });
+        return JsonSerializer.Serialize(new PracticeSettingsDocument(1, settings), ConfigurationJson.Options);
+    }
+
+    public static PracticeSettings Deserialize(string json)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        var document = JsonSerializer.Deserialize<PracticeSettingsDocument>(json, ConfigurationJson.Options)
+            ?? throw new JsonException("The practice settings document is empty.");
+        if (document.SchemaVersion != 1)
+        {
+            throw new ArgumentException($"Unsupported practice settings schema version: {document.SchemaVersion}.");
+        }
+
+        ConfigurationJson.Validate(AppConfiguration.Default with { Settings = document.Settings });
+        return document.Settings;
+    }
+}
+
+public static class ChordLibraryJson
+{
+    public static string Serialize(IReadOnlyList<ChordDefinition> chords)
+    {
+        ArgumentNullException.ThrowIfNull(chords);
+        ConfigurationJson.Validate(AppConfiguration.Default with { Chords = chords });
+        return JsonSerializer.Serialize(new ChordLibraryDocument(1, chords), ConfigurationJson.Options);
+    }
+
+    public static IReadOnlyList<ChordDefinition> Deserialize(string json)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        var document = JsonSerializer.Deserialize<ChordLibraryDocument>(json, ConfigurationJson.Options)
+            ?? throw new JsonException("The chord library document is empty.");
+        if (document.SchemaVersion != 1)
+        {
+            throw new ArgumentException($"Unsupported chord library schema version: {document.SchemaVersion}.");
+        }
+
+        ConfigurationJson.Validate(AppConfiguration.Default with { Chords = document.Chords });
+        return document.Chords;
     }
 }

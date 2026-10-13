@@ -213,6 +213,63 @@ public sealed class ConfigurationPracticeTests
     }
 
     [Fact]
+    public async Task SplitFileStoreKeepsDocumentsIndependentAndIgnoresLegacyConfiguration()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "GuitarFlashcards", Guid.NewGuid().ToString("N"));
+        var settingsPath = Path.Combine(directory, "practice-settings.json");
+        var chordsPath = Path.Combine(directory, "chord-library.json");
+        var legacyPath = Path.Combine(directory, "guitar-flashcards.json");
+        try
+        {
+            Directory.CreateDirectory(directory);
+            var legacyChord = new ChordLibrary().Add("Legacy chord", GuitarFingering.Open());
+            await File.WriteAllTextAsync(legacyPath, ConfigurationJson.Serialize(new AppConfiguration(
+                1,
+                [legacyChord],
+                new PracticeSettings(5, 8))));
+
+            var store = new GuitarFlashcards.Core.Persistence.SplitConfigurationFileStore(settingsPath, chordsPath);
+            var initiallyLoaded = await store.LoadAsync();
+            Assert.Empty(initiallyLoaded.Chords);
+            Assert.Equal(new PracticeSettings(), initiallyLoaded.Settings);
+
+            var settings = new PracticeSettings(1.5, 3.25, false, true)
+            {
+                StrumIntervalSeconds = 1.75,
+                ShowNextChord = false,
+                Mode = PracticeMode.Manual
+            };
+            await store.SaveSettingsAsync(settings);
+            Assert.True(File.Exists(settingsPath));
+            Assert.False(File.Exists(chordsPath));
+
+            var chord = new ChordLibrary().Add("Open E", GuitarFingering.Open());
+            await store.SaveChordsAsync([chord]);
+            var restored = await store.LoadAsync();
+            Assert.Equal(settings, restored.Settings);
+            Assert.Equal(chord.Id, Assert.Single(restored.Chords).Id);
+
+            var persistedSettings = await File.ReadAllTextAsync(settingsPath);
+            var persistedChords = await File.ReadAllTextAsync(chordsPath);
+            Assert.Throws<System.Text.Json.JsonException>(() => PracticeSettingsJson.Deserialize(persistedChords));
+            Assert.Throws<System.Text.Json.JsonException>(() => ChordLibraryJson.Deserialize(persistedSettings));
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => store.ImportSettingsAsync("{ malformed"));
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => store.ImportChordsAsync("{ malformed"));
+
+            Assert.Equal(persistedSettings, await File.ReadAllTextAsync(settingsPath));
+            Assert.Equal(persistedChords, await File.ReadAllTextAsync(chordsPath));
+            Assert.True(File.Exists(legacyPath));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task PracticeCountsDownSelectsEnabledWithoutRepeatingAndHonorsDurationRange()
     {
         var first = new ChordDefinition(Guid.NewGuid(), "First", GuitarFingering.Open(), null);

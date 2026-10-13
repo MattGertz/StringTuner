@@ -7,12 +7,16 @@
     <Grid Padding="16,6,16,16" RowDefinitions="Auto,*" RowSpacing="6">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <VerticalStackLayout Spacing="0" VerticalOptions="Center">
-                <Label Text="Matt's Guitar Flashcards" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource Ink}" />
                 <Label Text="PRACTICE" FontSize="10" CharacterSpacing="1.2" TextColor="{StaticResource Accent}" />
             </VerticalStackLayout>
-            <Button Grid.Column="1" Text="Settings &amp; Chords" IsEnabled="{Binding CanOpenSettings}" Clicked="OnSettingsClicked" VerticalOptions="Center"
-                    BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold"
-                    Padding="12,9" CornerRadius="4" />
+            <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                <Button Text="Library" Clicked="OnLibraryClicked" VerticalOptions="Center"
+                        BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold"
+                        Padding="10,9" CornerRadius="4" />
+                <Button Text="Settings" IsEnabled="{Binding CanOpenSettings}" Clicked="OnSettingsClicked" VerticalOptions="Center"
+                        BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold"
+                        Padding="10,9" CornerRadius="4" />
+            </HorizontalStackLayout>
         </Grid>
         <views:MouseWheelScrollView Grid.Row="1"
                         xmlns:views="clr-namespace:GuitarFlashcards.Views">
@@ -23,7 +27,7 @@
                 <Label Text="{Binding NextChordText}" IsVisible="{Binding ShowNextChordPreview}" FontSize="13" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
                 <ContentView x:Name="PracticeDiagramHost" HeightRequest="250" IsVisible="{Binding ShowPracticeFingering}" />
                 <Label Text="{Binding StatusText}" FontSize="15" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
-                <Label Text="Enable at least one chord in Settings to start a run." IsVisible="{Binding CanShowNoChordsMessage}" FontSize="15" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
+                <Label Text="Enable at least one chord in Library to start a run." IsVisible="{Binding CanShowNoChordsMessage}" FontSize="15" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
                 <Button x:Name="StartStopButton" Text="{Binding StartButtonText}" IsEnabled="{Binding CanStartPractice}" Clicked="OnStartStopClicked"
                         BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold" FontSize="19"
                         HeightRequest="48" WidthRequest="230" HorizontalOptions="Center" />

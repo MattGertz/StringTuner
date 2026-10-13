@@ -12,6 +12,7 @@ public partial class MainPage : ContentPage
     private readonly FlashcardsViewModel _viewModel;
     private readonly IServiceProvider _services;
     private SettingsPage? _settingsPage;
+    private LibraryPage? _libraryPage;
 #if WINDOWS
     private WinUIElement? _keyboardEventTarget;
     private WinUIKeyEventHandler? _keyboardEventHandler;
@@ -61,6 +62,12 @@ public partial class MainPage : ContentPage
     {
         _settingsPage ??= _services.GetRequiredService<SettingsPage>();
         await Navigation.PushModalAsync(_settingsPage);
+    }
+
+    private async void OnLibraryClicked(object? sender, EventArgs eventArgs)
+    {
+        _libraryPage ??= _services.GetRequiredService<LibraryPage>();
+        await Navigation.PushModalAsync(_libraryPage);
     }
 
     private async void OnStartStopClicked(object? sender, EventArgs eventArgs)

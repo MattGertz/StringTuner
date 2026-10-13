@@ -28,6 +28,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<FlashcardAudioPlayer>();
         builder.Services.AddSingleton<FlashcardsViewModel>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<LibraryPage>();
         builder.Services.AddTransient<ChordEditorPage>();
         return builder.Build();
     }

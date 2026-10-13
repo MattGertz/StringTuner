@@ -2,6 +2,8 @@
 
 An independent .NET MAUI chord practice app for Windows and Android. The tuner does not reference this app or its core library. `GuitarFlashcards.Core` contains the platform-independent fingering, note derivation, chord identification, configuration, persistence, synthesis, and practice-loop logic.
 
+The Home screen has separate Library and Settings destinations. Library contains chord preview, enabled state, playback, editing, deletion, and chord-library import/export. Settings contains practice timing, strum interval, display/audio options, next-chord preview, Timed/Manual mode, and practice-settings import/export.
+
 ## Chord identification
 
 The six strings are ordered low E to high E in standard tuning. Each string is open, muted, or fretted; fingering notes are derived from MIDI note numbers before identification. The identifier compares the actual pitch-class set against chord interval definitions, not named guitar shapes.
@@ -18,7 +20,7 @@ Settings are disabled while a practice run is active and available again after s
 
 ## Configuration
 
-Schema version 1 stores stable chord IDs, display names, six complete string states, derived metadata, enabled flags, fractional minimum/maximum durations, strum interval, next-chord preview, practice mode, and audio/display settings. New settings default to next-chord preview on and Timed mode when loading older version-1 files. Missing required fields, unsupported versions, invalid settings/fingerings, duplicate IDs, and chord metadata inconsistent with the fingering are rejected before import can replace local configuration. Writes use a temporary file followed by replacement. Local settings live in the platform app-data directory; import uses MAUI file picking and export uses the native MAUI save UI.
+The app stores practice settings in `practice-settings.json` and the chord library in `chord-library.json` under the platform app-data directory. Each page imports and exports only its own document; importing validates the selected document before replacing that file. Invalid imports leave existing data untouched. The former `guitar-flashcards.json` file is ignored and is not migrated. Writes use a temporary file followed by replacement. Import uses MAUI file picking and export uses the native MAUI save UI.
 
 ## Audio
 

@@ -215,7 +215,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         {
             var library = new ChordLibrary(Configuration.Chords);
             var chord = library.Add(displayName, fingering);
-            await PersistAsync(Configuration with { Chords = library.Chords }, cancellationToken);
+            await PersistChordsAsync(library.Chords, cancellationToken);
             SelectedChord = Chords.FirstOrDefault(item => item.Id == chord.Id);
             return SelectedChord ?? chord;
         }
@@ -232,7 +232,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         {
             var library = new ChordLibrary(Configuration.Chords);
             var chord = library.Update(id, displayName, fingering);
-            await PersistAsync(Configuration with { Chords = library.Chords }, cancellationToken);
+            await PersistChordsAsync(library.Chords, cancellationToken);
             SelectedChord = Chords.FirstOrDefault(item => item.Id == chord.Id);
             return SelectedChord ?? chord;
         }
@@ -249,7 +249,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         {
             var library = new ChordLibrary(Configuration.Chords);
             library.Delete(id);
-            await PersistAsync(Configuration with { Chords = library.Chords }, cancellationToken);
+            await PersistChordsAsync(library.Chords, cancellationToken);
             if (SelectedChord?.Id == id)
             {
                 SelectedChord = null;
@@ -268,7 +268,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         {
             var library = new ChordLibrary(Configuration.Chords);
             library.SetEnabled(id, enabled);
-            await PersistAsync(Configuration with { Chords = library.Chords }, cancellationToken);
+            await PersistChordsAsync(library.Chords, cancellationToken);
             if (IsRunning && !HasEnabledChords)
             {
                 StatusText = "Practice stopped because no chords are enabled.";
@@ -316,9 +316,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         await _configurationGate.WaitAsync(cancellationToken);
         try
         {
-            await PersistAsync(candidate, cancellationToken);
-            MinimumDurationText = minimum.ToString("0.###", CultureInfo.InvariantCulture);
-            MaximumDurationText = maximum.ToString("0.###", CultureInfo.InvariantCulture);
+            await PersistSettingsAsync(settings, cancellationToken);
             OnPropertyChanged(nameof(Settings));
             OnPropertyChanged(nameof(StrumIntervalSeconds));
             OnPropertyChanged(nameof(ShowFingering));
@@ -335,13 +333,27 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         }
     }
 
-    public async Task ReplaceConfigurationAsync(AppConfiguration configuration, CancellationToken cancellationToken = default)
+    public async Task ReplacePracticeSettingsAsync(PracticeSettings settings, CancellationToken cancellationToken = default)
     {
-        ConfigurationJson.Validate(configuration);
+        ConfigurationJson.Validate(Configuration with { Settings = settings });
         await _configurationGate.WaitAsync(cancellationToken);
         try
         {
-            await PersistAsync(configuration, cancellationToken);
+            await PersistSettingsAsync(settings, cancellationToken);
+        }
+        finally
+        {
+            _configurationGate.Release();
+        }
+    }
+
+    public async Task ReplaceChordLibraryAsync(IReadOnlyList<ChordDefinition> chords, CancellationToken cancellationToken = default)
+    {
+        ConfigurationJson.Validate(Configuration with { Chords = chords });
+        await _configurationGate.WaitAsync(cancellationToken);
+        try
+        {
+            await PersistChordsAsync(chords, cancellationToken);
             SelectedChord = null;
             if (IsRunning && !HasEnabledChords)
             {
@@ -354,8 +366,6 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
             _configurationGate.Release();
         }
     }
-
-    public string ExportJson() => ConfigurationJson.Serialize(Configuration);
 
     public async Task PlayChordAsync(GuitarFingering fingering, CancellationToken cancellationToken = default)
     {
@@ -492,11 +502,11 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         _configurationGate.Dispose();
     }
 
-    private async Task PersistAsync(AppConfiguration configuration, CancellationToken cancellationToken)
+    private async Task PersistSettingsAsync(PracticeSettings settings, CancellationToken cancellationToken)
     {
-        await _store.SaveAsync(configuration, cancellationToken);
-        Configuration = configuration;
-        RefreshChords();
+        await _store.SaveSettingsAsync(settings, cancellationToken);
+        Configuration = Configuration with { Settings = settings };
+        UpdateSettingsText();
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(StrumIntervalSeconds));
         OnPropertyChanged(nameof(ShowFingering));
@@ -504,11 +514,18 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         OnPropertyChanged(nameof(ShowNextChord));
         OnPropertyChanged(nameof(PracticeMode));
         OnPropertyChanged(nameof(IsManualPractice));
+        OnPropertyChanged(nameof(ShowPracticeFingering));
+    }
+
+    private async Task PersistChordsAsync(IReadOnlyList<ChordDefinition> chords, CancellationToken cancellationToken)
+    {
+        await _store.SaveChordsAsync(chords, cancellationToken);
+        Configuration = Configuration with { Chords = chords };
+        RefreshChords();
         OnPropertyChanged(nameof(HasEnabledChords));
         OnPropertyChanged(nameof(CanStartPractice));
         OnPropertyChanged(nameof(CanShowNoChordsMessage));
         OnPropertyChanged(nameof(PracticeChordName));
-        OnPropertyChanged(nameof(ShowPracticeFingering));
     }
 
     private void RefreshChords()
