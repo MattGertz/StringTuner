@@ -3,6 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace GuitarFlashcards.Core.Domain;
 
+public enum PracticeMode
+{
+    Timed,
+    Manual
+}
+
 public sealed record PracticeSettings(
     [property: JsonRequired] double MinimumDurationSeconds = 2,
     [property: JsonRequired] double MaximumDurationSeconds = 4,
@@ -10,6 +16,10 @@ public sealed record PracticeSettings(
     [property: JsonRequired] bool PlayChordDuringRun = true)
 {
     public double StrumIntervalSeconds { get; init; } = 1.0;
+
+    public bool ShowNextChord { get; init; } = true;
+
+    public PracticeMode Mode { get; init; } = PracticeMode.Timed;
 }
 
 public sealed record AppConfiguration(
@@ -66,6 +76,11 @@ public static class ConfigurationJson
             || configuration.Settings.StrumIntervalSeconds is < 0.25 or > 4.0)
         {
             throw new ArgumentException("Strum interval must be between 0.25 and 4.0 seconds.");
+        }
+
+        if (!Enum.IsDefined(configuration.Settings.Mode))
+        {
+            throw new ArgumentException("Practice mode is invalid.");
         }
 
         var ids = new HashSet<Guid>();

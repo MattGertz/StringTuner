@@ -12,13 +12,13 @@ The fully open standard guitar yields pitch classes E, G, B, D, and A. The ident
 
 `BarreInference` spans from the first to the last string sharing a finger number and fret, even when intervening strings have another assignment. The fingering diagram draws the connector between the matching finger markers. This is a visual heuristic only; it does not add barre objects or affect note derivation/chord naming.
 
-The fingering diagram contains frets 1–24 with a five-fret viewport. The editor and library preview scroll manually; the editor preserves its scroll position while the fingering changes. During practice, the viewport follows each chord's fretted range and keeps low positions anchored at fret 1. The editor also restores the selected finger when a marker is cleared; on Windows, Left/Right arrows select fingers 1–4.
+The fingering diagram contains frets 1–24 with a five-fret viewport. The editor and library preview scroll manually with the mouse wheel; the editor preserves its scroll position while the fingering changes. During practice, the viewport follows each chord's fretted range and keeps low positions anchored at fret 1. The editor also restores the selected finger when a marker is cleared, advances to the next finger after placing a note, and wraps from finger 4 to 1.
 
-Settings are disabled while a practice run is active and available again after stopping.
+Settings are disabled while a practice run is active and available again after stopping. Practice settings include a next-chord preview (on by default) and Timed/Manual mode (Timed by default). Manual mode holds each chord until Space advances; the preview is also shown during the countdown.
 
 ## Configuration
 
-Schema version 1 stores stable chord IDs, display names, six complete string states, derived metadata, enabled flags, fractional minimum/maximum durations, and both practice display/audio settings. Missing required fields, unsupported versions, invalid settings/fingerings, duplicate IDs, and chord metadata inconsistent with the fingering are rejected before import can replace local configuration. Writes use a temporary file followed by replacement. Local settings live in the platform app-data directory; import uses MAUI file picking and export uses the native MAUI save UI.
+Schema version 1 stores stable chord IDs, display names, six complete string states, derived metadata, enabled flags, fractional minimum/maximum durations, strum interval, next-chord preview, practice mode, and audio/display settings. New settings default to next-chord preview on and Timed mode when loading older version-1 files. Missing required fields, unsupported versions, invalid settings/fingerings, duplicate IDs, and chord metadata inconsistent with the fingering are rejected before import can replace local configuration. Writes use a temporary file followed by replacement. Local settings live in the platform app-data directory; import uses MAUI file picking and export uses the native MAUI save UI.
 
 ## Audio
 
@@ -37,4 +37,4 @@ dotnet publish GuitarFlashcards\GuitarFlashcards.csproj -f net10.0-android -c Re
 
 The Windows setup installer is written to `Setup\MattsGuitarFlashcardsSetup.exe`. It installs the unpackaged app under Program Files, creates a Start Menu shortcut, and offers an optional desktop shortcut.
 
-Core tests cover open/fretted/muted states, common C/G/D/E/Em fingerings, inversions, incomplete/rootless and ambiguous note sets, persistent round-trips and atomic invalid imports, fractional timing, countdown and stop behavior, enabled filtering, and generated open/fretted/polyphonic WAV data. Build success does not constitute physical playback testing: manual Windows speaker and Android device playback still need listening checks. No microphone capture or microphone analysis is included.
+Core tests cover open/fretted/muted states, common C/G/D/E/Em fingerings, inversions, incomplete/rootless and ambiguous note sets, persistent round-trips and atomic invalid imports, fractional timing, countdown and stop behavior, next-chord previews, manual-advance waiting/cancellation, enabled filtering, and generated open/fretted/polyphonic WAV data. Build success does not constitute physical playback testing: manual Windows speaker and Android device playback still need listening checks. No microphone capture or microphone analysis is included.

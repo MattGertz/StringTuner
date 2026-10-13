@@ -49,12 +49,16 @@ public sealed class SettingsPage : ContentPage
     };
     private bool _snappingStrumSlider;
     private double _selectedDiagramScrollY;
-    private readonly Switch _showFingering = new();
-    private readonly Switch _playDuringRun = new();
+    private readonly SettingSwitch _showFingering = new();
+    private readonly SettingSwitch _playDuringRun = new();
+    private readonly SettingSwitch _showNextChord = new() { IsToggled = true };
+    private readonly Button _timedModeButton = new() { Text = "Timed" };
+    private readonly Button _manualModeButton = new() { Text = "Manual" };
     private readonly Label _validationMessage = new() { TextColor = Color.FromArgb("#A33D32") };
     private Button? _saveSettingsButton;
     private PracticeSettings? _savedSettings;
     private bool _loadingControls;
+    private PracticeMode _selectedPracticeMode = PracticeMode.Timed;
 
     public SettingsPage(FlashcardsViewModel viewModel, ChordEditorPage editorPage)
     {
@@ -64,6 +68,7 @@ public sealed class SettingsPage : ContentPage
         _maximumDuration.TextChanged += OnSettingsEdited;
         _showFingering.Toggled += OnSettingsEdited;
         _playDuringRun.Toggled += OnSettingsEdited;
+        _showNextChord.Toggled += OnSettingsEdited;
         Title = "Settings and chord library";
         BackgroundColor = Color.FromArgb("#F4F3ED");
         BuildContent();
@@ -86,6 +91,8 @@ public sealed class SettingsPage : ContentPage
         import.Clicked += async (_, _) => await ImportAsync();
         var export = new Button { Text = "Export JSON" };
         export.Clicked += async (_, _) => await ExportAsync();
+        _timedModeButton.Clicked += (_, _) => SetPracticeMode(PracticeMode.Timed);
+        _manualModeButton.Clicked += (_, _) => SetPracticeMode(PracticeMode.Manual);
         var add = new Button { Text = "Add chord" };
         add.Clicked += async (_, _) =>
         {
@@ -124,6 +131,13 @@ public sealed class SettingsPage : ContentPage
         toggles.Add(ToggleRow("Show fingering", _showFingering), 0);
         toggles.Add(ToggleRow("Play chord during run", _playDuringRun), 1);
 
+        var practiceModeButtons = new HorizontalStackLayout
+        {
+            Spacing = 0,
+            Children = { _timedModeButton, _manualModeButton }
+        };
+        UpdatePracticeModeButtons();
+
         var settingsBlock = new VerticalStackLayout
         {
             Padding = new Thickness(16, 4),
@@ -134,6 +148,9 @@ public sealed class SettingsPage : ContentPage
                 timingGrid,
                 BuildStrumIntervalControl(),
                 toggles,
+                ToggleRow("Show next chord", _showNextChord),
+                new Label { Text = "Practice mode", FontSize = 12, TextColor = Color.FromArgb("#202A27") },
+                practiceModeButtons,
                 _validationMessage,
                 new HorizontalStackLayout { Spacing = 6, Children = { import, export, _saveSettingsButton } }
             }
@@ -166,7 +183,7 @@ public sealed class SettingsPage : ContentPage
         pageLayout.Add(settingsBlock, 0, 1);
         pageLayout.Add(libraryHeader, 0, 2);
         pageLayout.Add(_selectedChordPanel, 0, 3);
-        pageLayout.Add(new ScrollView { Content = _libraryRows, VerticalOptions = LayoutOptions.Fill }, 0, 4);
+        pageLayout.Add(new MouseWheelScrollView { Content = _libraryRows, VerticalOptions = LayoutOptions.Fill }, 0, 4);
         Content = pageLayout;
     }
 
@@ -250,6 +267,9 @@ public sealed class SettingsPage : ContentPage
         _strumIntervalValue.Text = $"{_viewModel.StrumIntervalSeconds:0.00} s";
         _showFingering.IsToggled = _viewModel.ShowFingering;
         _playDuringRun.IsToggled = _viewModel.PlayChordDuringRun;
+        _showNextChord.IsToggled = _viewModel.ShowNextChord;
+        _selectedPracticeMode = _viewModel.PracticeMode;
+        UpdatePracticeModeButtons();
         _validationMessage.Text = string.Empty;
         _savedSettings = _viewModel.Settings;
         _loadingControls = false;
@@ -257,6 +277,28 @@ public sealed class SettingsPage : ContentPage
     }
 
     private void OnSettingsEdited(object? sender, EventArgs eventArgs) => UpdateSaveSettingsState();
+
+    private void SetPracticeMode(PracticeMode mode)
+    {
+        _selectedPracticeMode = mode;
+        UpdatePracticeModeButtons();
+        UpdateSaveSettingsState();
+    }
+
+    private void UpdatePracticeModeButtons()
+    {
+        SetModeButton(_timedModeButton, _selectedPracticeMode == PracticeMode.Timed);
+        SetModeButton(_manualModeButton, _selectedPracticeMode == PracticeMode.Manual);
+    }
+
+    private static void SetModeButton(Button button, bool selected)
+    {
+        button.BackgroundColor = selected ? Color.FromArgb("#146C67") : Colors.White;
+        button.TextColor = selected ? Colors.White : Color.FromArgb("#202A27");
+        button.BorderColor = Color.FromArgb("#146C67");
+        button.BorderWidth = 1;
+        button.CornerRadius = 0;
+    }
 
     private bool HasUnsavedSettings
     {
@@ -273,6 +315,8 @@ public sealed class SettingsPage : ContentPage
                 || maximum != _savedSettings.MaximumDurationSeconds
                 || _showFingering.IsToggled != _savedSettings.ShowFingering
                 || _playDuringRun.IsToggled != _savedSettings.PlayChordDuringRun
+                || _showNextChord.IsToggled != _savedSettings.ShowNextChord
+                || _selectedPracticeMode != _savedSettings.Mode
                 || Math.Abs(_strumInterval.Value - _savedSettings.StrumIntervalSeconds) > 0.0001;
         }
     }
@@ -292,7 +336,9 @@ public sealed class SettingsPage : ContentPage
             _maximumDuration.Text ?? string.Empty,
             _showFingering.IsToggled,
             _playDuringRun.IsToggled,
-            _strumInterval.Value);
+            _strumInterval.Value,
+            _showNextChord.IsToggled,
+            _selectedPracticeMode);
         _validationMessage.Text = error ?? string.Empty;
         if (error is null)
         {
@@ -388,7 +434,7 @@ public sealed class SettingsPage : ContentPage
                 Padding = new Thickness(4, 8)
             };
             nameButton.Clicked += (_, _) => _viewModel.SelectChord(chord);
-            var enabled = new Switch { IsToggled = chord.Enabled, VerticalOptions = LayoutOptions.Center };
+            var enabled = new SettingSwitch { IsToggled = chord.Enabled, VerticalOptions = LayoutOptions.Center };
             enabled.Toggled += async (_, args) => await _viewModel.SetChordEnabledAsync(chord.Id, args.Value);
             var play = new Button
             {
@@ -466,16 +512,13 @@ public sealed class SettingsPage : ContentPage
         if (confirmed)
         {
             await _viewModel.DeleteChordAsync(chord.Id);
+            RefreshLibrary();
         }
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs eventArgs)
     {
-        if (eventArgs.PropertyName == nameof(FlashcardsViewModel.Configuration))
-        {
-            MainThread.BeginInvokeOnMainThread(RefreshLibrary);
-        }
-        else if (eventArgs.PropertyName == nameof(FlashcardsViewModel.SelectedChord))
+        if (eventArgs.PropertyName == nameof(FlashcardsViewModel.SelectedChord))
         {
             MainThread.BeginInvokeOnMainThread(RefreshLibrary);
         }

@@ -1,6 +1,10 @@
 using GuitarFlashcards.ViewModels;
 using GuitarFlashcards.Views;
-
+#if WINDOWS
+using WinUIElement = Microsoft.UI.Xaml.UIElement;
+using WinUIKeyEventArgs = Microsoft.UI.Xaml.Input.KeyRoutedEventArgs;
+using WinUIKeyEventHandler = Microsoft.UI.Xaml.Input.KeyEventHandler;
+#endif
 namespace GuitarFlashcards;
 
 public partial class MainPage : ContentPage
@@ -8,7 +12,10 @@ public partial class MainPage : ContentPage
     private readonly FlashcardsViewModel _viewModel;
     private readonly IServiceProvider _services;
     private SettingsPage? _settingsPage;
-
+#if WINDOWS
+    private WinUIElement? _keyboardEventTarget;
+    private WinUIKeyEventHandler? _keyboardEventHandler;
+#endif
     public MainPage(FlashcardsViewModel viewModel, IServiceProvider services)
     {
         InitializeComponent();
@@ -16,6 +23,24 @@ public partial class MainPage : ContentPage
         _services = services;
         BindingContext = viewModel;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+#if WINDOWS
+        if (_keyboardEventTarget is not null && _keyboardEventHandler is not null)
+        {
+            _keyboardEventTarget.RemoveHandler(WinUIElement.PreviewKeyDownEvent, _keyboardEventHandler);
+        }
+
+        _keyboardEventTarget = Handler?.PlatformView as WinUIElement;
+        if (_keyboardEventTarget is not null)
+        {
+            _keyboardEventHandler = OnWindowsPreviewKeyDown;
+            _keyboardEventTarget.AddHandler(WinUIElement.PreviewKeyDownEvent, _keyboardEventHandler, handledEventsToo: true);
+        }
+#endif
     }
 
     protected override async void OnAppearing()
@@ -38,8 +63,21 @@ public partial class MainPage : ContentPage
         await Navigation.PushModalAsync(_settingsPage);
     }
 
-    private async void OnStartStopClicked(object? sender, EventArgs eventArgs) =>
+    private async void OnStartStopClicked(object? sender, EventArgs eventArgs)
+    {
         await _viewModel.TogglePracticeAsync();
+    }
+
+#if WINDOWS
+    private void OnWindowsPreviewKeyDown(object sender, WinUIKeyEventArgs eventArgs)
+    {
+        if (eventArgs.Key == Windows.System.VirtualKey.Space && _viewModel.IsRunning && _viewModel.IsManualPractice)
+        {
+            _viewModel.AdvancePractice();
+            eventArgs.Handled = true;
+        }
+    }
+#endif
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs eventArgs)
     {

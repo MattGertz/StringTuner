@@ -15,7 +15,7 @@ public sealed class FingeringDiagramView : ContentView
     private readonly GuitarFingering _fingering;
     private readonly int _selectedFinger;
     private readonly bool _interactive;
-    private readonly ScrollView _fretScrollView;
+    private readonly MouseWheelScrollView _fretScrollView;
 
     public FingeringDiagramView(
         GuitarFingering fingering,
@@ -30,7 +30,7 @@ public sealed class FingeringDiagramView : ContentView
         _fingering = fingering;
         _selectedFinger = selectedFinger;
         _interactive = interactive;
-        _fretScrollView = new ScrollView
+        _fretScrollView = new MouseWheelScrollView
         {
             Orientation = ScrollOrientation.Vertical,
             VerticalScrollBarVisibility = showScrollBar ? ScrollBarVisibility.Always : ScrollBarVisibility.Never,

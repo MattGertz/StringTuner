@@ -139,7 +139,7 @@ public sealed class ChordEditorPage : ContentPage
         {
             RowDefinitions = { new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto) }
         };
-        pageLayout.Add(new ScrollView { Content = editorContent }, 0, 0);
+        pageLayout.Add(new MouseWheelScrollView { Content = editorContent }, 0, 0);
         pageLayout.Add(actions, 0, 1);
         Content = pageLayout;
         RefreshDiagram();
@@ -200,12 +200,18 @@ public sealed class ChordEditorPage : ContentPage
             (stringIndex, fret) =>
             {
                 var current = _draft.Strings[stringIndex];
-                if (current.State == StringNoteState.Fretted && current.Fret == fret && current.Finger is int existingFinger)
+                var clearingExistingPosition = current.State == StringNoteState.Fretted && current.Fret == fret;
+                if (clearingExistingPosition && current.Finger is int existingFinger)
                 {
                     SetSelectedFinger(existingFinger);
                 }
 
                 _draft = FingeringEditor.SetFrettedPosition(_draft, stringIndex, fret, _selectedFinger);
+                if (!clearingExistingPosition)
+                {
+                    SetSelectedFinger(_selectedFinger == 4 ? 1 : _selectedFinger + 1);
+                }
+
                 RefreshDiagram();
             },
             (stringIndex, state) =>

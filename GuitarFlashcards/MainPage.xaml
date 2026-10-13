@@ -14,18 +14,20 @@
                     BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold"
                     Padding="12,9" CornerRadius="4" />
         </Grid>
-        <ScrollView Grid.Row="1">
+        <views:MouseWheelScrollView Grid.Row="1"
+                        xmlns:views="clr-namespace:GuitarFlashcards.Views">
             <VerticalStackLayout Spacing="6" HorizontalOptions="Center" MaximumWidthRequest="680">
                 <Label Text="{Binding CountdownText}" HeightRequest="46" VerticalTextAlignment="Center" FontSize="40" FontAttributes="Bold" TextColor="{StaticResource Accent}" HorizontalTextAlignment="Center" />
                 <Label Text="{Binding PracticeChordName}" HeightRequest="42" VerticalTextAlignment="Center" FontSize="32" FontAttributes="Bold" TextColor="{StaticResource Ink}" HorizontalTextAlignment="Center" />
                 <Label Text="{Binding PracticeDerivedName}" FontSize="16" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
+                <Label Text="{Binding NextChordText}" IsVisible="{Binding ShowNextChordPreview}" FontSize="13" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
                 <ContentView x:Name="PracticeDiagramHost" HeightRequest="250" IsVisible="{Binding ShowPracticeFingering}" />
                 <Label Text="{Binding StatusText}" FontSize="15" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
                 <Label Text="Enable at least one chord in Settings to start a run." IsVisible="{Binding CanShowNoChordsMessage}" FontSize="15" TextColor="{StaticResource MutedInk}" HorizontalTextAlignment="Center" />
-                <Button Text="{Binding StartButtonText}" IsEnabled="{Binding CanStartPractice}" Clicked="OnStartStopClicked"
+                <Button x:Name="StartStopButton" Text="{Binding StartButtonText}" IsEnabled="{Binding CanStartPractice}" Clicked="OnStartStopClicked"
                         BackgroundColor="{StaticResource Accent}" TextColor="White" FontAttributes="Bold" FontSize="19"
                         HeightRequest="48" WidthRequest="230" HorizontalOptions="Center" />
             </VerticalStackLayout>
-        </ScrollView>
+        </views:MouseWheelScrollView>
     </Grid>
 </ContentPage>

@@ -14,9 +14,11 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
     private readonly FlashcardAudioPlayer _audioPlayer;
     private readonly PracticeEngine _practiceEngine = new();
     private readonly SemaphoreSlim _configurationGate = new(1, 1);
+    private TaskCompletionSource<bool>? _manualAdvanceWaiter;
     private CancellationTokenSource? _runCancellation;
     private AppConfiguration _configuration = AppConfiguration.Default;
     private ChordDefinition? _practiceChord;
+    private ChordDefinition? _nextPracticeChord;
     private ChordDefinition? _selectedChord;
     private Guid? _playingChordId;
     private bool _isRunning;
@@ -58,6 +60,21 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
                 OnPropertyChanged(nameof(PracticeDerivedName));
                 OnPropertyChanged(nameof(PracticeFingering));
                 OnPropertyChanged(nameof(ShowPracticeFingering));
+                OnPropertyChanged(nameof(NextChordText));
+                OnPropertyChanged(nameof(ShowNextChordPreview));
+            }
+        }
+    }
+
+    public ChordDefinition? NextPracticeChord
+    {
+        get => _nextPracticeChord;
+        private set
+        {
+            if (SetProperty(ref _nextPracticeChord, value))
+            {
+                OnPropertyChanged(nameof(NextChordText));
+                OnPropertyChanged(nameof(ShowNextChordPreview));
             }
         }
     }
@@ -137,6 +154,12 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
 
     public bool PlayChordDuringRun => Settings.PlayChordDuringRun;
 
+    public bool ShowNextChord => Settings.ShowNextChord;
+
+    public PracticeMode PracticeMode => Settings.Mode;
+
+    public bool IsManualPractice => Settings.Mode == PracticeMode.Manual;
+
     public bool HasEnabledChords => Configuration.Chords.Any(chord => chord.Enabled);
 
     public bool CanStartPractice => IsRunning || HasEnabledChords;
@@ -152,6 +175,10 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
     public string PracticeDerivedName => PracticeChord is ChordDefinition chord
         ? ChordNoteEngine.IdentifyFingering(chord.Fingering, InstrumentTuning.StandardGuitar).DisplayText
         : string.Empty;
+
+    public string NextChordText => NextPracticeChord is ChordDefinition chord ? $"Next note will be {chord.DisplayName}" : string.Empty;
+
+    public bool ShowNextChordPreview => ShowNextChord && NextPracticeChord is not null;
 
     public GuitarFingering PracticeFingering => PracticeChord?.Fingering ?? GuitarFingering.Open();
 
@@ -171,6 +198,9 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(ShowFingering));
         OnPropertyChanged(nameof(PlayChordDuringRun));
+        OnPropertyChanged(nameof(ShowNextChord));
+        OnPropertyChanged(nameof(PracticeMode));
+        OnPropertyChanged(nameof(IsManualPractice));
         OnPropertyChanged(nameof(HasEnabledChords));
         OnPropertyChanged(nameof(CanStartPractice));
         OnPropertyChanged(nameof(PracticeChordName));
@@ -257,6 +287,8 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         bool showFingering,
         bool playChordDuringRun,
         double strumIntervalSeconds,
+        bool showNextChord,
+        PracticeMode practiceMode,
         CancellationToken cancellationToken = default)
     {
         if (!double.TryParse(minimumText, NumberStyles.Float, CultureInfo.InvariantCulture, out var minimum)
@@ -267,7 +299,9 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
 
         var settings = new PracticeSettings(minimum, maximum, showFingering, playChordDuringRun)
         {
-            StrumIntervalSeconds = strumIntervalSeconds
+            StrumIntervalSeconds = strumIntervalSeconds,
+            ShowNextChord = showNextChord,
+            Mode = practiceMode
         };
         var candidate = Configuration with { Settings = settings };
         try
@@ -289,6 +323,9 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
             OnPropertyChanged(nameof(StrumIntervalSeconds));
             OnPropertyChanged(nameof(ShowFingering));
             OnPropertyChanged(nameof(PlayChordDuringRun));
+            OnPropertyChanged(nameof(ShowNextChord));
+            OnPropertyChanged(nameof(PracticeMode));
+            OnPropertyChanged(nameof(IsManualPractice));
             OnPropertyChanged(nameof(ShowPracticeFingering));
             return null;
         }
@@ -367,24 +404,27 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         var cancellationToken = _runCancellation.Token;
         IsRunning = true;
         PracticeChord = null;
+        NextPracticeChord = null;
         CountdownText = string.Empty;
         StatusText = "Get ready";
         try
         {
-            var result = await _practiceEngine.RunAsync(
+            var result = await _practiceEngine.RunWithPreviewAsync(
                 () => Configuration.Chords.Where(chord => chord.Enabled).ToArray(),
                 Configuration.Settings,
-                value =>
+                (value, nextChord) =>
                 {
                     CountdownText = value.ToString(CultureInfo.InvariantCulture);
+                    NextPracticeChord = nextChord;
                     return ValueTask.CompletedTask;
                 },
-                async (chord, _) =>
+                async (chord, nextChord, _) =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     PracticeChord = chord;
+                    NextPracticeChord = nextChord;
                     CountdownText = string.Empty;
-                    StatusText = chord.DerivedChordName ?? "Chord displayed";
+                    StatusText = IsManualPractice ? "Press Space to continue" : chord.DerivedChordName ?? "Chord displayed";
                     if (Configuration.Settings.PlayChordDuringRun)
                     {
                         await _audioPlayer.PlayAsync(chord.Fingering, Settings.StrumIntervalSeconds, cancellationToken);
@@ -397,12 +437,14 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
                     }
                     OnPropertyChanged(nameof(IsAudioPlaying));
                 },
+                IsManualPractice ? WaitForManualAdvanceAsync : null,
                 cancellationToken);
 
             if (result == PracticeEndReason.NoEnabledChords)
             {
                 StatusText = "Practice stopped because no chords are enabled.";
                 PracticeChord = null;
+                NextPracticeChord = null;
             }
         }
         catch (OperationCanceledException)
@@ -422,6 +464,7 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
             _runCancellation?.Dispose();
             _runCancellation = null;
             CountdownText = string.Empty;
+            NextPracticeChord = null;
             IsRunning = false;
         }
     }
@@ -432,6 +475,14 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         await _audioPlayer.StopAsync();
         PlayingChordId = null;
         OnPropertyChanged(nameof(IsAudioPlaying));
+    }
+
+    public void AdvancePractice()
+    {
+        if (IsRunning && IsManualPractice)
+        {
+            _manualAdvanceWaiter?.TrySetResult(true);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -450,6 +501,9 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
         OnPropertyChanged(nameof(StrumIntervalSeconds));
         OnPropertyChanged(nameof(ShowFingering));
         OnPropertyChanged(nameof(PlayChordDuringRun));
+        OnPropertyChanged(nameof(ShowNextChord));
+        OnPropertyChanged(nameof(PracticeMode));
+        OnPropertyChanged(nameof(IsManualPractice));
         OnPropertyChanged(nameof(HasEnabledChords));
         OnPropertyChanged(nameof(CanStartPractice));
         OnPropertyChanged(nameof(CanShowNoChordsMessage));
@@ -473,6 +527,20 @@ public sealed class FlashcardsViewModel : INotifyPropertyChanged, IAsyncDisposab
     {
         MinimumDurationText = Configuration.Settings.MinimumDurationSeconds.ToString("0.###", CultureInfo.InvariantCulture);
         MaximumDurationText = Configuration.Settings.MaximumDurationSeconds.ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private async Task WaitForManualAdvanceAsync(CancellationToken cancellationToken)
+    {
+        var waiter = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Interlocked.Exchange(ref _manualAdvanceWaiter, waiter);
+        try
+        {
+            await waiter.Task.WaitAsync(cancellationToken);
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref _manualAdvanceWaiter, null, waiter);
+        }
     }
 
     private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
